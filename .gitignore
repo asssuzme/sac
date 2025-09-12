@@ -1,0 +1,103 @@
+# Dependencies
+node_modules/
+dist/
+build/
+.pnp
+.pnp.js
+
+# Environment variables
+.env
+.env.local
+.env.development.local
+.env.test.local
+.env.production.local
+
+# Logs
+logs
+*.log
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+lerna-debug.log*
+.pnpm-debug.log*
+
+# OS files
+.DS_Store
+Thumbs.db
+
+# IDE files
+.idea
+.vscode
+*.swp
+*.swo
+*~
+
+# Testing
+coverage/
+.nyc_output
+
+# Production
+/build
+
+# Replit specific
+.replit
+.config/
+.cache/
+.upm/
+.pythonlibs/
+
+# Database
+*.db
+*.sqlite
+
+# Temporary files
+*.tmp
+*.temp
+temp/
+tmp/
+
+# Session and cookie files
+*_cookies.txt
+*_session.txt
+cookies.txt
+session_test.txt
+
+# Logs and test files
+*.log
+redirect.log
+test.txt
+fix_test.txt
+login_test.txt
+
+# Compressed files
+*.tar.gz
+*.zip
+
+# OAuth redirect files
+oauth-redirect.html
+oauth-server.js
+redirect-server.js
+redirect3000.py
+run-oauth-redirect.sh
+start-redirect.sh
+
+# Attached assets (user uploads)
+attached_assets/
+
+# Build artifacts
+postbuild.js
+
+# Lock files (keep package-lock.json)
+yarn.lock
+pnpm-lock.yamlattached_assets/
+direct-push.sh
+server/payment-routes.ts
+server/routes.ts
+attached_assets/
+direct-push.sh
+server/payment-routes.ts
+server/routes.ts
+server/services/cashfree.ts
+final-push-fix.sh
+server/payment-routes.ts
+server/routes.ts

@@ -1,0 +1,18 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <title>Redirecting...</title>
+  <script>
+    // Automatic redirect from port 3000 to 5000
+    if (window.location.port === '3000') {
+      window.location.href = window.location.href.replace(':3000', ':5000');
+    } else {
+      // If not on port 3000, redirect to the app
+      window.location.href = '/';
+    }
+  </script>
+</head>
+<body>
+  <p>Redirecting to the application...</p>
+</body>
+</html>
