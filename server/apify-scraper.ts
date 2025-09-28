@@ -34,8 +34,8 @@ export async function scrapeLinkedInJobs(
   try {
     console.log('Starting LinkedIn job scraping with Apify...', { linkedinUrl: request.linkedinUrl });
 
-    // Use bebity's LinkedIn Jobs Scraper - fastest and most reliable in 2024
-    const run = await apifyClient.actor('bebity/linkedin-jobs-scraper').call({
+    // Use curious_coder's LinkedIn Jobs Scraper - >98% success rate
+    const run = await apifyClient.actor('curious_coder/linkedin-jobs-search-scraper').call({
       startUrls: [{ url: request.linkedinUrl }],
       maxResults: request.maxResults || 50,
       proxy: {
