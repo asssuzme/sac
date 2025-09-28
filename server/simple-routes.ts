@@ -8,6 +8,7 @@ import OpenAI from "openai";
 import multer from "multer";
 import { google } from "googleapis";
 import passport from './passport-config';
+import { storage } from './storage';
 // import PDFParse from 'pdf-parse'; // Commenting out for now due to import issue
 
 // Extend Express Request type to include user
