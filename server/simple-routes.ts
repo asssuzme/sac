@@ -603,52 +603,53 @@ Format the email with proper greeting and sign-off.`;
   // === RESUME ROUTES ===
   
   // Comprehensive resume upload endpoint supporting multiple file types
-  app.post("/api/resume/upload", requireAuth, upload.single('resume'), async (req, res) => {
+  app.post("/api/resume/upload", requireAuth, upload.any(), async (req, res) => {
     try {
       let resumeText = '';
       let fileData: string | undefined;
       let fileName: string | undefined;
       let mimeType: string | undefined;
       
-      if (req.file) {
+      const uploadedFile = req.files?.[0] || req.file;
+      if (uploadedFile) {
         // Handle file upload (PDF, TXT, DOCX, Images, etc.)
-        fileName = req.file.originalname;
-        mimeType = req.file.mimetype;
-        fileData = req.file.buffer.toString('base64');
+        fileName = uploadedFile.originalname;
+        mimeType = uploadedFile.mimetype;
+        fileData = uploadedFile.buffer.toString('base64');
         
-        console.log(`Processing file: ${fileName}, type: ${mimeType}, size: ${req.file.buffer.length} bytes`);
+        console.log(`Processing file: ${fileName}, type: ${mimeType}, size: ${uploadedFile.buffer.length} bytes`);
         
-        if (req.file.mimetype === 'application/pdf') {
+        if (uploadedFile.mimetype === 'application/pdf') {
           // Extract text from PDF
           const pdfParse = require('pdf-parse');
           try {
-            const pdfData = await pdfParse(req.file.buffer);
+            const pdfData = await pdfParse(uploadedFile.buffer);
             resumeText = pdfData.text;
             console.log(`Extracted ${resumeText.length} characters from PDF`);
           } catch (error) {
             console.error('PDF parsing error:', error);
             resumeText = ''; // Still store the file even if text extraction fails
           }
-        } else if (req.file.mimetype === 'application/vnd.openxmlformats-officedocument.wordprocessingml.document') {
+        } else if (uploadedFile.mimetype === 'application/vnd.openxmlformats-officedocument.wordprocessingml.document') {
           // Extract text from DOCX
           const mammoth = require('mammoth');
           try {
-            const result = await mammoth.extractRawText({ buffer: req.file.buffer });
+            const result = await mammoth.extractRawText({ buffer: uploadedFile.buffer });
             resumeText = result.value;
             console.log(`Extracted ${resumeText.length} characters from DOCX`);
           } catch (error) {
             console.error('DOCX parsing error:', error);
             resumeText = '';
           }
-        } else if (req.file.mimetype.startsWith('text/')) {
+        } else if (uploadedFile.mimetype.startsWith('text/')) {
           // For text files, use the content directly
-          resumeText = req.file.buffer.toString('utf-8');
+          resumeText = uploadedFile.buffer.toString('utf-8');
           console.log(`Read ${resumeText.length} characters from text file`);
-        } else if (req.file.mimetype.startsWith('image/')) {
+        } else if (uploadedFile.mimetype.startsWith('image/')) {
           // Extract text from images using OCR
           const Tesseract = require('tesseract.js');
           try {
-            const { data: { text } } = await Tesseract.recognize(req.file.buffer, 'eng');
+            const { data: { text } } = await Tesseract.recognize(uploadedFile.buffer, 'eng');
             resumeText = text.trim();
             console.log(`Extracted ${resumeText.length} characters from image via OCR`);
           } catch (error) {
