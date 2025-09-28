@@ -585,7 +585,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // Email generation endpoint
-  app.post("/api/email/generate", requireAuth, async (req, res) => {
+  app.post("/api/generate-email", requireAuth, async (req, res) => {
     const { jobTitle, companyName, jobDescription, resumeText } = req.body;
     
     if (!jobTitle || !companyName || !resumeText) {
@@ -690,61 +690,8 @@ Format the email with proper greeting and sign-off.`;
 
 
 
-  // === EMAIL ROUTES ===
-  
-  app.post("/api/email/generate", requireAuth, async (req, res) => {
-    const { jobTitle, companyName, jobDescription, resume } = req.body;
-    
-    const prompt = `Generate a professional email applying for the ${jobTitle} position at ${companyName}.
 
-Job Description:
-${jobDescription}
-
-Resume:
-${resume}
-
-Create a compelling, personalized email that:
-1. Shows genuine interest in the specific role and company
-2. Highlights relevant experience and skills from the resume
-3. Is concise (under 250 words)
-4. Has a professional tone
-
-Format the email with proper greeting and sign-off.`;
-
-    try {
-      if (!openai) {
-        return res.status(503).json({ error: 'OpenAI service not configured. Please configure OPENAI_API_KEY environment variable.' });
-      }
-      
-      // the newest OpenAI model is "gpt-5" which was released August 7, 2025. do not change this unless explicitly requested by the user
-      const completion = await openai.chat.completions.create({
-        model: "gpt-5",
-        messages: [
-          {
-            role: "system",
-            content: "You are a professional career coach helping job seekers write compelling application emails."
-          },
-          {
-            role: "user",
-            content: prompt
-          }
-        ],
-        temperature: 0.7,
-        max_tokens: 500,
-      });
-
-      const emailContent = completion.choices[0]?.message?.content || '';
-      res.json({
-        email: emailContent,
-        subject: `Application for ${jobTitle} position at ${companyName}`,
-      });
-    } catch (error) {
-      console.error('Email generation error:', error);
-      res.status(500).json({ error: 'Failed to generate email' });
-    }
-  });
-
-  app.post("/api/email/send", requireAuth, async (req, res) => {
+  app.post("/api/send-email", requireAuth, async (req, res) => {
     const { to, subject, body, jobTitle, companyName } = req.body;
     
     try {
