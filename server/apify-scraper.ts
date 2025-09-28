@@ -54,6 +54,26 @@ export async function scrapeLinkedInJobs(
     if (items.length > 0) {
       console.log('Sample Apify item structure:', JSON.stringify(items[0], null, 2));
     }
+    
+    // Check ALL jobs for job poster URLs - log any that have them
+    console.log('🔍 Checking all', items.length, 'jobs for poster URLs...');
+    let foundPosterCount = 0;
+    items.forEach((item: any, index: number) => {
+      const allKeys = Object.keys(item);
+      const posterKeys = allKeys.filter(key => 
+        key.toLowerCase().includes('poster') || 
+        key.toLowerCase().includes('recruiter') || 
+        key.toLowerCase().includes('hiring') ||
+        key.toLowerCase().includes('contact') ||
+        (typeof item[key] === 'string' && item[key].includes('linkedin.com/in/'))
+      );
+      
+      if (posterKeys.length > 0) {
+        foundPosterCount++;
+        console.log(`✅ Job ${index + 1} (${item.title}) has poster fields:`, posterKeys.map(k => `${k}: ${item[k]}`));
+      }
+    });
+    console.log(`🎯 Found ${foundPosterCount} jobs with potential poster information out of ${items.length} total jobs`);
 
     // Transform Apify results to our format
     const results: JobScrapingResult[] = items.map((item: any, index: number) => {
@@ -61,8 +81,8 @@ export async function scrapeLinkedInJobs(
       const jobTitle = item.title || item.jobTitle || item.position || '';
       const companyName = item.company || item.companyName || item.employer || '';
       
-      // Extract job poster information from various possible fields and description text
-      let jobPosterUrl = item.jobPosterUrl || item.postedByUrl || item.recruiterUrl || 
+      // Extract job poster information - using the CORRECT field names from Apify response
+      let jobPosterUrl = item.jobPosterProfileUrl || item.jobPosterUrl || item.postedByUrl || item.recruiterUrl || 
                          item.hrUrl || item.contactUrl || item.postedBy?.url || 
                          item.poster?.url || item.recruiter?.profileUrl || null;
       

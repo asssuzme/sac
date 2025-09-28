@@ -1476,6 +1476,31 @@ Format the email with proper greeting and sign-off.`;
     }
   });
 
+  // TEMPORARY TEST ENDPOINT - Remove after testing poster URL detection
+  app.get('/api/test-scraping/:requestId', async (req, res) => {
+    try {
+      const requestId = req.params.requestId;
+      console.log('🧪 TESTING: Starting job scraping for request:', requestId);
+      
+      // Get the request from database
+      const request = await db.select().from(jobScrapingRequests).where(eq(jobScrapingRequests.id, requestId)).limit(1);
+      if (request.length === 0) {
+        return res.status(404).json({ error: 'Request not found' });
+      }
+      
+      const jobRequest = request[0];
+      console.log('🧪 TESTING: Found request:', jobRequest.linkedinUrl);
+      
+      // Call the async processing function directly
+      await processJobScrapingAsync(requestId, jobRequest.linkedinUrl);
+      
+      res.json({ message: 'Test scraping completed', requestId });
+    } catch (error) {
+      console.error('🧪 TESTING: Error:', error);
+      res.status(500).json({ error: error.message });
+    }
+  });
+
   const httpServer = createServer(app);
   return httpServer;
 }
