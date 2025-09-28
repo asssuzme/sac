@@ -468,10 +468,6 @@ async function processJobScrapingAsync(requestId: string, linkedinUrl: string) {
       }
     }
 
-    // Debug: Check what enriched jobs look like
-    console.log(`🔍 DEBUG: Sample enriched job structure:`, JSON.stringify(enrichedJobs[0], null, 2));
-    console.log(`🔍 DEBUG: Jobs with emails check:`, enrichedJobs.filter(j => j.contactEmail || j.jobPosterEmail).length);
-
     // Mark jobs with contacts as canApply: true for Free plan
     const jobsWithCanApplyStatus = enrichedJobs.map(job => ({
       ...job,
@@ -481,8 +477,6 @@ async function processJobScrapingAsync(requestId: string, linkedinUrl: string) {
     // Calculate free/pro plan counts
     const freeJobsCount = jobsWithCanApplyStatus.filter(job => job.canApply).length;
     const proJobsCount = jobsWithCanApplyStatus.filter(job => !job.canApply).length;
-    
-    console.log(`🔍 DEBUG: Calculated counts - Free: ${freeJobsCount}, Pro: ${proJobsCount}`);
 
     // Update with results - save to separate columns for proper workflow tracking
     await db
@@ -814,7 +808,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
       status: request.status,
       results: request.results, // Original scraped jobs
       filteredResults: request.filtered_results, // Quality filtered jobs with canApply status
-      enrichedResults: request.enriched_results, // Jobs with contact emails
+      enrichedJobs: request.filtered_results, // FIXED: Frontend expects this field with canApply status!
+      enrichedResults: request.enriched_results, // Raw jobs with contact emails
       totalJobsFound: request.total_jobs_found,
       freeJobsShown: request.free_jobs_shown || 0, // Jobs with contacts (Free plan)
       proJobsShown: request.pro_jobs_shown || 0, // Jobs without contacts (Pro plan)
