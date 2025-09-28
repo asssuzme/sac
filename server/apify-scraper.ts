@@ -37,7 +37,7 @@ export async function scrapeLinkedInJobs(
     // Use curious_coder LinkedIn Jobs Scraper actor (free alternative)
     const run = await apifyClient.actor('curious_coder/linkedin-jobs-scraper').call({
       urls: [request.linkedinUrl],     // The LinkedIn search URL as array
-      maxResults: 100,                 // Fixed at 100 jobs to control costs
+      count: 100,                      // Fixed at 100 jobs to control costs
       proxy: {
         useApifyProxy: true,
         apifyProxyGroups: ['RESIDENTIAL']
@@ -57,7 +57,7 @@ export async function scrapeLinkedInJobs(
     }
 
     // Transform Apify results to our format
-    const results: JobScrapingResult[] = items.map((item: any) => {
+    const results: JobScrapingResult[] = items.map((item: any, index: number) => {
       // More flexible field mapping - check multiple possible field names
       const jobTitle = item.title || item.jobTitle || item.position || '';
       const companyName = item.company || item.companyName || item.employer || '';
@@ -75,7 +75,7 @@ export async function scrapeLinkedInJobs(
       };
       
       // Debug log for first few items
-      if (results.length < 3) {
+      if (index < 3) {
         console.log('Mapped job:', mapped);
       }
       
