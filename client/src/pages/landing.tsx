@@ -6,11 +6,12 @@ import { Link, useLocation } from "wouter";
 import { queryClient } from "@/lib/queryClient";
 import { ArrowRight, Sparkles, Search, Mail, Users, BarChart3, Target, Zap, Globe, Shield, CheckCircle, Star, TrendingUp, Briefcase, Brain, Clock, Award, Calendar, MessageCircle, MessageSquare, Wand2, Link2, BrainCircuit, Gauge, MapPin, Send, Contact, Filter, ArrowDown, Check, Rocket, Building2, ChevronRight, ArrowUpRight, Sparkle, Zap as Lightning, MousePointer, FileText, Bot, Inbox, Activity, PenTool, Cpu, GitBranch, Layers, X, Upload, Menu } from "lucide-react";
 import { SiLinkedin, SiOpenai, SiGmail } from "react-icons/si";
-import linkedinLogo from "@assets/image_1756213583930.png";
-import openaiLogo from "@assets/Open-AI-White-Logo-PNG_1754939061778.jpg";
-import mongodbLogo from "@assets/image_1756213591373.png";
-import apifyLogo from "@assets/image_1756213599809.png";
-import aiJobHunterLogo from "@assets/Blue and White Modern IT Cybersecurity Logo_1756311726744.png";
+// Temporarily commenting out missing asset imports
+// import linkedinLogo from "@assets/image_1756213583930.png";
+// import openaiLogo from "@assets/Open-AI-White-Logo-PNG_1754939061778.jpg";
+// import mongodbLogo from "@assets/image_1756213591373.png";
+// import apifyLogo from "@assets/image_1756213599809.png";
+// import aiJobHunterLogo from "@assets/Blue and White Modern IT Cybersecurity Logo_1756311726744.png";
 import Footer from "@/components/footer";
 import GlassProcessConsole from "@/components/glass-process-console";
 import { Badge } from "@/components/ui/badge";
@@ -839,14 +840,14 @@ export default function Landing() {
                   }}
                 />
                 
-                {/* Logo Image */}
-                <motion.img
-                  src={aiJobHunterLogo}
-                  alt="AI JobHunter Logo - AI-powered job finder and automated application tool"
-                  className="relative w-full h-full object-contain drop-shadow-2xl"
+                {/* Logo Placeholder */}
+                <motion.div
+                  className="relative w-full h-full flex items-center justify-center bg-gradient-to-br from-blue-600 to-blue-800 rounded-lg drop-shadow-2xl"
                   whileHover={{ scale: 1.05 }}
                   transition={{ type: "spring", stiffness: 300 }}
-                />
+                >
+                  <div className="text-white text-2xl font-bold">AI</div>
+                </motion.div>
                 
                 {/* Rotating Ring Effect */}
                 <motion.div

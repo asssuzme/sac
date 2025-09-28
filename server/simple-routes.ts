@@ -28,7 +28,7 @@ declare module 'express-session' {
 }
 
 const upload = multer({ storage: multer.memoryStorage() });
-const openai = new OpenAI({ apiKey: process.env.OPENAI_API_KEY });
+const openai = process.env.OPENAI_API_KEY ? new OpenAI({ apiKey: process.env.OPENAI_API_KEY }) : null;
 
 // Simple auth middleware
 async function requireAuth(req: Request, res: Response, next: NextFunction) {
@@ -404,6 +404,10 @@ Create a compelling, personalized email that:
 Format the email with proper greeting and sign-off.`;
 
     try {
+      if (!openai) {
+        return res.status(503).json({ error: 'OpenAI service not configured. Please configure OPENAI_API_KEY environment variable.' });
+      }
+      
       const completion = await openai.chat.completions.create({
         model: "gpt-3.5-turbo",
         messages: [

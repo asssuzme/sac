@@ -34,15 +34,16 @@ console.log('Initial callback URL:', getCallbackURL());
 console.log('Google Client ID:', process.env.GOOGLE_CLIENT_ID);
 console.log('================================');
 
-// Configure Google OAuth strategy - basic profile only
-passport.use(
-  new GoogleStrategy(
-    {
-      clientID: process.env.GOOGLE_CLIENT_ID!,
-      clientSecret: process.env.GOOGLE_CLIENT_SECRET!,
-      callbackURL: getCallbackURL(),
-      passReqToCallback: true, // This allows us to access the request in the callback
-    },
+// Configure Google OAuth strategy - basic profile only (only if credentials are provided)
+if (process.env.GOOGLE_CLIENT_ID && process.env.GOOGLE_CLIENT_SECRET) {
+  passport.use(
+    new GoogleStrategy(
+      {
+        clientID: process.env.GOOGLE_CLIENT_ID!,
+        clientSecret: process.env.GOOGLE_CLIENT_SECRET!,
+        callbackURL: getCallbackURL(),
+        passReqToCallback: true, // This allows us to access the request in the callback
+      },
     async (req, accessToken, refreshToken, profile, done) => {
       try {
         console.log('Google OAuth callback with profile:', profile.id, profile.emails?.[0]?.value);
@@ -94,7 +95,10 @@ passport.use(
       }
     }
   )
-);
+  );
+} else {
+  console.log('OAuth credentials not provided - OAuth authentication disabled for development');
+}
 
 // Serialize user for session
 passport.serializeUser((user: any, done) => {
