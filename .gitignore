@@ -89,15 +89,13 @@ postbuild.js
 
 # Lock files (keep package-lock.json)
 yarn.lock
-pnpm-lock.yamlattached_assets/
+pnpm-lock.yaml
+
+# Cleanup scripts and old files
 direct-push.sh
-server/payment-routes.ts
-server/routes.ts
-attached_assets/
-direct-push.sh
+final-push-fix.sh
+
+# Old route files (replaced by simple-routes.ts)
 server/payment-routes.ts
 server/routes.ts
 server/services/cashfree.ts
-final-push-fix.sh
-server/payment-routes.ts
-server/routes.ts
