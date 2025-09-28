@@ -74,19 +74,22 @@ const openai = process.env.OPENAI_API_KEY ? new OpenAI({ apiKey: process.env.OPE
 // Background job processing function
 // Filter jobs for quality leads
 function filterJobs(jobs: any[]): any[] {
-  console.log('Filtering jobs, sample job:', jobs[0]); // Debug log
+  console.log('Filtering jobs, total count:', jobs.length);
   
-  return jobs.filter(job => {
-    // More lenient filter - only exclude truly empty jobs
-    const hasCompany = job.companyName && job.companyName.trim() !== '';
-    const hasTitle = job.jobTitle && job.jobTitle.trim() !== '';
-    
-    // Log what we're filtering
-    if (!hasCompany || !hasTitle) {
-      console.log(`Filtering out job: title="${job.jobTitle}", company="${job.companyName}"`);
-    }
-    
-    return hasCompany && hasTitle;
+  if (jobs.length > 0) {
+    console.log('First job sample:', JSON.stringify(jobs[0], null, 2));
+  }
+  
+  // TEMPORARILY DISABLED FILTER - let all jobs through to debug the issue
+  // We'll see what data actually comes through
+  return jobs.map(job => {
+    // Ensure basic structure even if fields are missing
+    return {
+      ...job,
+      jobTitle: job.jobTitle || job.title || 'Position Not Specified',
+      companyName: job.companyName || job.company || 'Company Not Specified',
+      canApply: false // Will be set to true during enrichment
+    };
   });
 }
 
