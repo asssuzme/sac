@@ -11,7 +11,6 @@ import passport from './passport-config';
 import { storage } from './storage';
 import { scrapeLinkedInJobs, generateLinkedInSearchUrl } from './apify-scraper';
 import path from 'path';
-// import PDFParse from 'pdf-parse'; // Commenting out for now due to import issue
 
 // Extend Express Request type to include user
 declare global {
@@ -730,8 +729,9 @@ Format the email with proper greeting and sign-off.`;
         
         if (uploadedFile.mimetype === 'application/pdf') {
           // Extract text from PDF
-          const pdfParse = require('pdf-parse');
           try {
+            // Dynamic import to avoid initialization errors
+            const pdfParse = (await import('pdf-parse')).default;
             const pdfData = await pdfParse(uploadedFile.buffer);
             resumeText = pdfData.text;
             console.log(`Extracted ${resumeText.length} characters from PDF`);
@@ -741,8 +741,8 @@ Format the email with proper greeting and sign-off.`;
           }
         } else if (uploadedFile.mimetype === 'application/vnd.openxmlformats-officedocument.wordprocessingml.document') {
           // Extract text from DOCX
-          const mammoth = require('mammoth');
           try {
+            const mammoth = await import('mammoth');
             const result = await mammoth.extractRawText({ buffer: uploadedFile.buffer });
             resumeText = result.value;
             console.log(`Extracted ${resumeText.length} characters from DOCX`);
@@ -756,9 +756,9 @@ Format the email with proper greeting and sign-off.`;
           console.log(`Read ${resumeText.length} characters from text file`);
         } else if (uploadedFile.mimetype.startsWith('image/')) {
           // Extract text from images using OCR
-          const Tesseract = require('tesseract.js');
           try {
-            const { data: { text } } = await Tesseract.recognize(uploadedFile.buffer, 'eng');
+            const Tesseract = await import('tesseract.js');
+            const { data: { text } } = await Tesseract.default.recognize(uploadedFile.buffer, 'eng');
             resumeText = text.trim();
             console.log(`Extracted ${resumeText.length} characters from image via OCR`);
           } catch (error) {
@@ -854,8 +854,9 @@ Format the email with proper greeting and sign-off.`;
         console.log(`[UPLOAD-RESUME] Processing file: ${fileName}, type: ${mimeType}, size: ${uploadedFile.buffer.length} bytes`);
         
         if (uploadedFile.mimetype === 'application/pdf') {
-          const pdfParse = require('pdf-parse');
           try {
+            // Dynamic import to avoid initialization errors
+            const pdfParse = (await import('pdf-parse')).default;
             const pdfData = await pdfParse(uploadedFile.buffer);
             resumeText = pdfData.text;
           } catch (error) {
