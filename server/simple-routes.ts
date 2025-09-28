@@ -74,12 +74,19 @@ const openai = process.env.OPENAI_API_KEY ? new OpenAI({ apiKey: process.env.OPE
 // Background job processing function
 // Filter jobs for quality leads
 function filterJobs(jobs: any[]): any[] {
+  console.log('Filtering jobs, sample job:', jobs[0]); // Debug log
+  
   return jobs.filter(job => {
-    // Filter for jobs with good company information
-    return job.companyName && 
-           job.companyName !== 'Unknown Company' &&
-           job.jobTitle && 
-           job.jobTitle !== 'Unknown Position';
+    // More lenient filter - only exclude truly empty jobs
+    const hasCompany = job.companyName && job.companyName.trim() !== '';
+    const hasTitle = job.jobTitle && job.jobTitle.trim() !== '';
+    
+    // Log what we're filtering
+    if (!hasCompany || !hasTitle) {
+      console.log(`Filtering out job: title="${job.jobTitle}", company="${job.companyName}"`);
+    }
+    
+    return hasCompany && hasTitle;
   });
 }
 
@@ -99,6 +106,7 @@ async function enrichJobsWithProfiles(jobs: any[]): Promise<any[]> {
               ...job,
               jobPosterName: profileData.name || '',
               jobPosterEmail: profileData.email,
+              contactEmail: profileData.email,  // Add contactEmail for compatibility
               jobPosterLinkedin: profileData.profileUrl || '',
               jobPosterTitle: profileData.headline || '',
               canApply: true
@@ -176,10 +184,11 @@ async function scrapeLinkedInProfile(job: any): Promise<any> {
       token: process.env.APIFY_API_KEY,
     });
     
-    // Use dev_fusion LinkedIn Profile Scraper - no cookies required, finds emails
-    const run = await apifyClient.actor('dev_fusion/linkedin-profile-scraper').call({
-      profileUrls: [job.applyUrl], // Try to extract profile from job URL
-      scrapeEmails: true,
+    // Use apify/email-extractor to find emails from company websites
+    // Since job URLs aren't profile URLs, we need to find emails differently
+    const run = await apifyClient.actor('apify/email-extractor').call({
+      urls: [job.companyWebsite || `https://${job.companyName.toLowerCase().replace(/[^a-z0-9]/g, '')}.com`],
+      maxPagesPerUrl: 5,
       proxy: {
         useApifyProxy: true,
         apifyProxyGroups: ['RESIDENTIAL'],
@@ -190,14 +199,22 @@ async function scrapeLinkedInProfile(job: any): Promise<any> {
     const { items } = await apifyClient.dataset(run.defaultDatasetId).listItems();
     
     if (items && items.length > 0) {
-      const profile = items[0];
-      return {
-        name: profile.fullName || profile.firstName + ' ' + profile.lastName,
-        email: profile.email || profile.emails?.[0],
-        profileUrl: profile.profileUrl,
-        headline: profile.headline,
-        company: profile.company || job.companyName,
-      };
+      const emailData = items[0];
+      // Extract the first valid email found
+      const emails = emailData.emails || [];
+      const contactEmail = emails.find((e: any) => 
+        e && !e.includes('noreply') && !e.includes('support') && !e.includes('info@')
+      ) || emails[0];
+      
+      if (contactEmail) {
+        return {
+          name: job.companyName + ' Hiring Team',
+          email: contactEmail,
+          profileUrl: job.applyUrl,
+          headline: `Hiring for ${job.jobTitle}`,
+          company: job.companyName,
+        };
+      }
     }
     
     return null;

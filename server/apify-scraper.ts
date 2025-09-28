@@ -47,19 +47,37 @@ export async function scrapeLinkedInJobs(
     const { items } = await apifyClient.dataset(run.defaultDatasetId).listItems();
 
     console.log(`Scraped ${items.length} jobs from LinkedIn`);
+    
+    // Debug: log the structure of the first item
+    if (items.length > 0) {
+      console.log('Sample Apify item structure:', JSON.stringify(items[0], null, 2));
+    }
 
     // Transform Apify results to our format
-    const results: JobScrapingResult[] = items.map((item: any) => ({
-      jobTitle: item.title || 'Unknown Position',
-      companyName: item.company || 'Unknown Company',
-      location: item.location || 'Not specified',
-      salary: item.salary,
-      description: item.description || '',
-      applyUrl: item.url || request.linkedinUrl,
-      postedDate: item.postedDate,
-      experienceLevel: item.experienceLevel,
-      workType: item.workType,
-    }));
+    const results: JobScrapingResult[] = items.map((item: any) => {
+      // More flexible field mapping - check multiple possible field names
+      const jobTitle = item.title || item.jobTitle || item.position || '';
+      const companyName = item.company || item.companyName || item.employer || '';
+      
+      const mapped = {
+        jobTitle: jobTitle || 'Unknown Position',
+        companyName: companyName || 'Unknown Company',
+        location: item.location || 'Not specified',
+        salary: item.salary,
+        description: item.description || '',
+        applyUrl: item.url || item.link || request.linkedinUrl,
+        postedDate: item.postedDate || item.posted,
+        experienceLevel: item.experienceLevel || item.experience,
+        workType: item.workType || item.type,
+      };
+      
+      // Debug log for first few items
+      if (results.length < 3) {
+        console.log('Mapped job:', mapped);
+      }
+      
+      return mapped;
+    });
 
     return results;
   } catch (error) {
