@@ -72,6 +72,141 @@ const upload = multer({
 const openai = process.env.OPENAI_API_KEY ? new OpenAI({ apiKey: process.env.OPENAI_API_KEY }) : null;
 
 // Background job processing function
+// Filter jobs for quality leads
+function filterJobs(jobs: any[]): any[] {
+  return jobs.filter(job => {
+    // Filter for jobs with good company information
+    return job.companyName && 
+           job.companyName !== 'Unknown Company' &&
+           job.jobTitle && 
+           job.jobTitle !== 'Unknown Position';
+  });
+}
+
+// Enrich jobs with LinkedIn profiles to find contact emails
+async function enrichJobsWithProfiles(jobs: any[]): Promise<any[]> {
+  console.log(`Starting enrichment for ${jobs.length} jobs...`);
+  
+  const enrichedJobs = await Promise.all(
+    jobs.map(async (job) => {
+      try {
+        // If job has a LinkedIn post URL, try to get poster profile
+        if (job.applyUrl && job.applyUrl.includes('linkedin.com')) {
+          const profileData = await scrapeLinkedInProfile(job);
+          
+          if (profileData && profileData.email) {
+            return {
+              ...job,
+              jobPosterName: profileData.name || '',
+              jobPosterEmail: profileData.email,
+              jobPosterLinkedin: profileData.profileUrl || '',
+              jobPosterTitle: profileData.headline || '',
+              canApply: true
+            };
+          }
+        }
+        
+        return {
+          ...job,
+          canApply: false
+        };
+      } catch (error) {
+        console.error(`Error enriching job ${job.jobTitle}:`, error);
+        return {
+          ...job,
+          canApply: false
+        };
+      }
+    })
+  );
+  
+  return enrichedJobs;
+}
+
+// Scrape company profile for additional context
+async function scrapeCompanyProfile(companyUrl: string): Promise<any> {
+  if (!process.env.APIFY_API_KEY) {
+    return null;
+  }
+  
+  try {
+    const apifyClient = new ApifyClient({
+      token: process.env.APIFY_API_KEY,
+    });
+    
+    // Use dev_fusion Company Scraper
+    const run = await apifyClient.actor('dev_fusion/linkedin-company-scraper').call({
+      companyUrls: [companyUrl],
+      proxy: {
+        useApifyProxy: true,
+        apifyProxyGroups: ['RESIDENTIAL'],
+      },
+    });
+    
+    const { items } = await apifyClient.dataset(run.defaultDatasetId).listItems();
+    
+    if (items && items.length > 0) {
+      const company = items[0];
+      return {
+        name: company.name,
+        website: company.websiteUrl,
+        industry: company.industry,
+        size: company.companySize,
+        description: company.description,
+        specialties: company.specialties,
+      };
+    }
+    
+    return null;
+  } catch (error) {
+    console.error('Company scraping error:', error);
+    return null;
+  }
+}
+
+// Scrape LinkedIn profile to find contact information
+async function scrapeLinkedInProfile(job: any): Promise<any> {
+  if (!process.env.APIFY_API_KEY) {
+    console.error('APIFY_API_KEY not configured for profile scraping');
+    return null;
+  }
+  
+  try {
+    const apifyClient = new ApifyClient({
+      token: process.env.APIFY_API_KEY,
+    });
+    
+    // Use dev_fusion LinkedIn Profile Scraper - no cookies required, finds emails
+    const run = await apifyClient.actor('dev_fusion/linkedin-profile-scraper').call({
+      profileUrls: [job.applyUrl], // Try to extract profile from job URL
+      scrapeEmails: true,
+      proxy: {
+        useApifyProxy: true,
+        apifyProxyGroups: ['RESIDENTIAL'],
+      },
+    });
+    
+    // Get the results
+    const { items } = await apifyClient.dataset(run.defaultDatasetId).listItems();
+    
+    if (items && items.length > 0) {
+      const profile = items[0];
+      return {
+        name: profile.fullName || profile.firstName + ' ' + profile.lastName,
+        email: profile.email || profile.emails?.[0],
+        profileUrl: profile.profileUrl,
+        headline: profile.headline,
+        company: profile.company || job.companyName,
+      };
+    }
+    
+    return null;
+  } catch (error) {
+    console.error('Profile scraping error:', error);
+    return null;
+  }
+}
+
 async function processJobScrapingAsync(requestId: string, linkedinUrl: string) {
   try {
     console.log(`Starting background job scraping for request ${requestId}`);
@@ -90,18 +225,27 @@ async function processJobScrapingAsync(requestId: string, linkedinUrl: string) {
 
     console.log(`Scraped ${scrapedJobs.length} jobs for request ${requestId}`);
 
+    // Filter for quality leads (jobs with company info)
+    const qualityJobs = filterJobs(scrapedJobs);
+    console.log(`Filtered to ${qualityJobs.length} quality leads`);
+
+    // Enrich jobs with LinkedIn profiles to find contact emails
+    const enrichedJobs = await enrichJobsWithProfiles(qualityJobs);
+    console.log(`Enriched ${enrichedJobs.filter(j => j.contactEmail).length} jobs with contact emails`);
+
     // Update with results
     await db
       .update(jobScrapingRequests)
       .set({
         status: 'completed',
         results: {
-          message: `Successfully scraped ${scrapedJobs.length} jobs from LinkedIn`,
+          message: `Successfully scraped ${scrapedJobs.length} jobs, enriched ${enrichedJobs.filter(j => j.contactEmail).length} with emails`,
           jobsFound: scrapedJobs.length,
-          jobs: scrapedJobs,
+          jobs: enrichedJobs,
           enrichedResults: {
-            totalCount: scrapedJobs.length,
-            canApplyCount: scrapedJobs.filter(job => job.applyUrl).length
+            totalCount: enrichedJobs.length,
+            canApplyCount: enrichedJobs.filter(job => job.canApply).length,
+            emailsFound: enrichedJobs.filter(job => job.contactEmail).length
           }
         },
         completedAt: new Date()
@@ -382,7 +526,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // Get scraping status
-  app.get("/api/scrape-job/status/:requestId", requireAuth, async (req, res) => {
+  app.get("/api/scrape-job/:requestId", requireAuth, async (req, res) => {
     const { requestId } = req.params;
     
     const [request] = await db
@@ -407,6 +551,96 @@ export async function registerRoutes(app: Express): Promise<Server> {
       enrichedResults: request.results?.enrichedResults || null,
       error: request.errorMessage,
     });
+  });
+
+  // Company scraping endpoint
+  app.post("/api/scrape-company", requireAuth, async (req, res) => {
+    const { companyLinkedinUrl } = req.body;
+    
+    if (!companyLinkedinUrl) {
+      return res.status(400).json({ error: 'Company LinkedIn URL is required' });
+    }
+
+    try {
+      const companyData = await scrapeCompanyProfile(companyLinkedinUrl);
+      
+      if (!companyData) {
+        return res.json({ 
+          success: false, 
+          message: 'Could not scrape company profile' 
+        });
+      }
+
+      res.json({ 
+        success: true, 
+        company: companyData 
+      });
+    } catch (error) {
+      console.error('Company scraping error:', error);
+      res.status(500).json({ 
+        success: false, 
+        error: 'Failed to scrape company profile' 
+      });
+    }
+  });
+
+  // Email generation endpoint
+  app.post("/api/email/generate", requireAuth, async (req, res) => {
+    const { jobTitle, companyName, jobDescription, resumeText } = req.body;
+    
+    if (!jobTitle || !companyName || !resumeText) {
+      return res.status(400).json({ error: 'Missing required fields' });
+    }
+
+    if (!openai) {
+      return res.status(500).json({ error: 'OpenAI not configured' });
+    }
+
+    try {
+      const prompt = `Generate a professional email applying for the ${jobTitle} position at ${companyName}.
+
+Job Description:
+${jobDescription || 'Not provided'}
+
+Resume:
+${resumeText}
+
+Create a compelling, personalized email that:
+1. Shows genuine interest in the specific role and company
+2. Highlights relevant experience and skills from the resume
+3. Demonstrates understanding of the job requirements
+4. Is concise (under 250 words)
+5. Has a professional tone
+6. Includes a clear call to action
+
+Format the email with proper greeting and sign-off.`;
+
+      const completion = await openai.chat.completions.create({
+        model: "gpt-4",
+        messages: [
+          {
+            role: "system",
+            content: "You are a professional career coach helping job seekers write compelling application emails."
+          },
+          {
+            role: "user",
+            content: prompt
+          }
+        ],
+        temperature: 0.7,
+        max_tokens: 500,
+      });
+
+      const emailContent = completion.choices[0]?.message?.content || '';
+
+      res.json({
+        email: emailContent,
+        subject: `Application for ${jobTitle} position at ${companyName}`,
+      });
+    } catch (error) {
+      console.error('Email generation error:', error);
+      res.status(500).json({ error: 'Failed to generate email' });
+    }
   });
   
   // Generate LinkedIn URL from search parameters
