@@ -753,13 +753,13 @@ export async function registerRoutes(app: Express): Promise<Server> {
       }
       
       // Handle snake_case fields from database
-      const freeJobs = search.freeJobsShown || search.free_jobs_shown || 0;
-      const lockedJobs = search.proJobsShown || search.pro_jobs_shown || 0;
+      const freeJobs = (search as any).freeJobsShown || (search as any).free_jobs_shown || 0;
+      const lockedJobs = (search as any).proJobsShown || (search as any).pro_jobs_shown || 0;
 
       return {
         ...search,
         enrichedResults: {
-          jobs: search.filteredResults || search.filtered_results || [],
+          jobs: (search as any).filteredResults || (search as any).filtered_results || [],
           freeJobs: freeJobs,
           lockedJobs: lockedJobs,
           canApplyCount: freeJobs,
@@ -846,19 +846,19 @@ export async function registerRoutes(app: Express): Promise<Server> {
       id: request.id,
       status: request.status,
       results: request.results, // Original scraped jobs
-      filteredResults: request.filteredResults || request.filtered_results, // Quality filtered jobs with canApply status
-      enrichedJobs: request.filteredResults || request.filtered_results, // Jobs array with canApply status
+      filteredResults: (request as any).filteredResults || (request as any).filtered_results, // Quality filtered jobs with canApply status
+      enrichedJobs: (request as any).filteredResults || (request as any).filtered_results, // Jobs array with canApply status
       enrichedResults: {
         // Frontend expects an object with these fields!
-        jobs: request.filteredResults || request.filtered_results || [],
-        freeJobs: request.freeJobsShown || request.free_jobs_shown || 0,
-        lockedJobs: request.proJobsShown || request.pro_jobs_shown || 0,
-        canApplyCount: request.freeJobsShown || request.free_jobs_shown || 0,
+        jobs: (request as any).filteredResults || (request as any).filtered_results || [],
+        freeJobs: (request as any).freeJobsShown || (request as any).free_jobs_shown || 0,
+        lockedJobs: (request as any).proJobsShown || (request as any).pro_jobs_shown || 0,
+        canApplyCount: (request as any).freeJobsShown || (request as any).free_jobs_shown || 0,
         fakeTotalJobs: fakeTotalJobs
       },
-      totalJobsFound: request.totalJobsFound || request.total_jobs_found,
-      freeJobsShown: request.freeJobsShown || request.free_jobs_shown || 0, // Jobs with contacts (Free plan)
-      proJobsShown: request.proJobsShown || request.pro_jobs_shown || 0, // Jobs without contacts (Pro plan)
+      totalJobsFound: (request as any).totalJobsFound || (request as any).total_jobs_found,
+      freeJobsShown: (request as any).freeJobsShown || (request as any).free_jobs_shown || 0, // Jobs with contacts (Free plan)
+      proJobsShown: (request as any).proJobsShown || (request as any).pro_jobs_shown || 0, // Jobs without contacts (Pro plan)
       error: request.errorMessage,
     });
   });
