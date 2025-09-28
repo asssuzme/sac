@@ -741,12 +741,41 @@ export async function registerRoutes(app: Express): Promise<Server> {
       .limit(10);
     console.log('🔍 DEBUG: Found', recentSearches.length, 'recent searches');
 
+    // Format recent searches with proper enrichedResults structure
+    const formattedSearches = recentSearches.map(search => {
+      // Calculate fake total for display consistency
+      let fakeTotalJobs = 1315;
+      if (search.id) {
+        let hash = 0;
+        for (let i = 0; i < search.id.length; i++) {
+          hash = ((hash << 5) - hash) + search.id.charCodeAt(i);
+          hash = hash & hash;
+        }
+        fakeTotalJobs = 500 + Math.abs(hash % 1501);
+      }
+      
+      // Handle snake_case fields from database
+      const freeJobs = search.freeJobsShown || search.free_jobs_shown || 0;
+      const lockedJobs = search.proJobsShown || search.pro_jobs_shown || 0;
+
+      return {
+        ...search,
+        enrichedResults: {
+          jobs: search.filteredResults || search.filtered_results || [],
+          freeJobs: freeJobs,
+          lockedJobs: lockedJobs,
+          canApplyCount: freeJobs,
+          fakeTotalJobs: fakeTotalJobs
+        }
+      };
+    });
+
     res.json({
       totalJobsScraped: scrapingCount?.count || 0,
       totalApplicationsSent: applicationCount?.count || 0,
       activeJobSearches: recentScrapingCount?.count || 0,
       pendingApplications: 0,
-      recentSearches: recentSearches,
+      recentSearches: formattedSearches,
     });
   });
 
