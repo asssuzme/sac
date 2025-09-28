@@ -227,6 +227,157 @@ async function scrapeLinkedInProfile(job: any): Promise<any> {
   }
 }
 
+// Helper function to generate job application email using AI
+async function generateJobApplicationEmail(job: any, resumeText: string): Promise<{ subject: string; body: string }> {
+  if (!openai) {
+    throw new Error('OpenAI not configured');
+  }
+
+  const prompt = `Generate a professional email applying for the ${job.jobTitle} position at ${job.companyName}.
+
+Job Description:
+${job.description || 'Not provided'}
+
+Resume:
+${resumeText}
+
+Create a compelling, personalized email that:
+1. Shows genuine interest in the specific role and company
+2. Highlights relevant experience and skills from the resume
+3. Demonstrates understanding of the job requirements
+4. Is concise (under 250 words)
+5. Has a professional tone
+6. Includes a clear call to action
+
+Format the email with proper greeting and sign-off.`;
+
+  const completion = await openai.chat.completions.create({
+    model: "gpt-4",
+    messages: [
+      {
+        role: "system",
+        content: "You are a professional career coach helping job seekers write compelling application emails."
+      },
+      {
+        role: "user",
+        content: prompt
+      }
+    ],
+    temperature: 0.7,
+    max_tokens: 500,
+  });
+
+  const emailContent = completion.choices[0]?.message?.content || '';
+
+  return {
+    subject: `Application for ${job.jobTitle} position at ${job.companyName}`,
+    body: emailContent
+  };
+}
+
+// Helper function to send job application email via Gmail
+async function sendJobApplicationEmail(user: any, job: any, emailContent: { subject: string; body: string }, requestId: string): Promise<boolean> {
+  try {
+    // Get Gmail credentials
+    const [creds] = await db
+      .select()
+      .from(gmailCredentials)
+      .where(eq(gmailCredentials.userId, user.id))
+      .limit(1);
+
+    if (!creds || !creds.isActive) {
+      console.log(`Gmail not connected for user ${user.id} - skipping email`);
+      return false;
+    }
+
+    const oauth2Client = new google.auth.OAuth2(
+      process.env.GOOGLE_CLIENT_ID,
+      process.env.GOOGLE_CLIENT_SECRET
+    );
+
+    oauth2Client.setCredentials({
+      access_token: creds.accessToken,
+      refresh_token: creds.refreshToken,
+    });
+
+    const gmail = google.gmail({ version: 'v1', auth: oauth2Client });
+
+    // Get resume for attachment
+    const userResume = await storage.getUserResume(user.id);
+    const contactEmail = job.contactEmail || job.jobPosterEmail;
+
+    // Create email with attachment if resume exists
+    let emailMessage: string;
+    
+    if (userResume?.resumeFileData && userResume?.resumeFileName) {
+      // Create multipart MIME message with attachment
+      const boundary = `====boundary${Date.now()}====`;
+      const htmlBody = emailContent.body.replace(/\n/g, '<br>');
+      
+      const messageParts = [];
+      messageParts.push(`To: ${contactEmail}`);
+      messageParts.push(`Subject: ${emailContent.subject}`);
+      messageParts.push('MIME-Version: 1.0');
+      messageParts.push(`Content-Type: multipart/mixed; boundary="${boundary}"`);
+      messageParts.push('');
+      messageParts.push(`--${boundary}`);
+      messageParts.push('Content-Type: text/html; charset=utf-8');
+      messageParts.push('Content-Transfer-Encoding: base64');
+      messageParts.push('');
+      messageParts.push(Buffer.from(htmlBody).toString('base64'));
+      messageParts.push('');
+      messageParts.push(`--${boundary}`);
+      messageParts.push(`Content-Type: ${userResume.resumeFileMimeType || 'application/octet-stream'}; name="${userResume.resumeFileName}"`);
+      messageParts.push(`Content-Disposition: attachment; filename="${userResume.resumeFileName}"`);
+      messageParts.push('Content-Transfer-Encoding: base64');
+      messageParts.push('');
+      messageParts.push(userResume.resumeFileData);
+      messageParts.push('');
+      messageParts.push(`--${boundary}--`);
+      
+      emailMessage = messageParts.join('\r\n');
+    } else {
+      // Simple email without attachment
+      emailMessage = [
+        `To: ${contactEmail}`,
+        `Subject: ${emailContent.subject}`,
+        'Content-Type: text/html; charset=utf-8',
+        '',
+        emailContent.body.replace(/\n/g, '<br>')
+      ].join('\r\n');
+    }
+
+    // Send the email
+    const encodedMessage = Buffer.from(emailMessage).toString('base64').replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/, '');
+    
+    const sendResult = await gmail.users.messages.send({
+      userId: 'me',
+      requestBody: {
+        raw: encodedMessage,
+      },
+    });
+
+    // Log the application
+    await db.insert(emailApplications).values({
+      userId: user.id,
+      recipientEmail: contactEmail,
+      subject: emailContent.subject,
+      body: emailContent.body,
+      jobTitle: job.jobTitle,
+      companyName: job.companyName,
+      status: 'sent',
+      sentAt: new Date(),
+      gmailMessageId: sendResult.data.id || '',
+    });
+
+    console.log(`Automated email sent: ${emailContent.subject} to ${contactEmail}`);
+    return true;
+  } catch (error) {
+    console.error('Failed to send automated email:', error);
+    return false;
+  }
+}
+
 async function processJobScrapingAsync(requestId: string, linkedinUrl: string) {
   try {
     console.log(`Starting background job scraping for request ${requestId}`);
@@ -253,6 +404,66 @@ async function processJobScrapingAsync(requestId: string, linkedinUrl: string) {
     const enrichedJobs = await enrichJobsWithProfiles(qualityJobs);
     console.log(`Enriched ${enrichedJobs.filter(j => j.contactEmail).length} jobs with contact emails`);
 
+    // COMPLETE AUTOMATION: Generate and send emails for jobs with contacts
+    const jobsWithContacts = enrichedJobs.filter(job => job.contactEmail || job.jobPosterEmail);
+    let emailsSent = 0;
+    
+    if (jobsWithContacts.length > 0) {
+      console.log(`Starting automated email generation and sending for ${jobsWithContacts.length} jobs`);
+      
+      // Get job request first to get the correct user ID
+      const [jobRequest] = await db
+        .select()
+        .from(jobScrapingRequests)
+        .where(eq(jobScrapingRequests.id, requestId))
+        .limit(1);
+
+      if (!jobRequest) {
+        console.error(`Job request ${requestId} not found - cannot send emails`);
+        return;
+      }
+
+      // Get user data using the correct user ID from job request
+      const [user] = await db
+        .select()
+        .from(users)
+        .where(eq(users.id, jobRequest.userId))
+        .limit(1);
+
+      if (!user) {
+        console.error(`User ${jobRequest.userId} not found - cannot send emails`);
+        return;
+      }
+
+      const resumeText = jobRequest.resumeText || 'Experienced professional seeking new opportunities';
+
+      for (const job of jobsWithContacts.slice(0, 3)) { // Limit to first 3 to control costs
+        try {
+          // Defensive check for contact email
+          const contactEmail = job.contactEmail || job.jobPosterEmail;
+          if (!contactEmail) {
+            console.log(`Skipping ${job.jobTitle} at ${job.companyName} - no contact email found`);
+            continue;
+          }
+
+          console.log(`Generating automated email for ${job.jobTitle} at ${job.companyName} (contact: ${contactEmail})`);
+          
+          // Generate email using AI
+          const emailContent = await generateJobApplicationEmail(job, resumeText);
+          
+          // Send email automatically
+          const emailSent = await sendJobApplicationEmail(user, job, emailContent, requestId);
+          
+          if (emailSent) {
+            emailsSent++;
+            console.log(`✅ Automated email sent for ${job.jobTitle} at ${job.companyName} to ${contactEmail}`);
+          }
+        } catch (error) {
+          console.error(`❌ Failed to send automated email for ${job.jobTitle} at ${job.companyName}:`, error);
+        }
+      }
+    }
+
     // Update with results - save to separate columns for proper workflow tracking
     await db
       .update(jobScrapingRequests)
@@ -266,7 +477,7 @@ async function processJobScrapingAsync(requestId: string, linkedinUrl: string) {
       })
       .where(eq(jobScrapingRequests.id, requestId));
 
-    console.log(`Job scraping completed for request ${requestId}`);
+    console.log(`COMPLETE AUTOMATION FINISHED for request ${requestId}: Scraped ${scrapedJobs.length} jobs, filtered to ${qualityJobs.length}, enriched ${jobsWithContacts.length} with contacts, sent ${emailsSent} emails automatically`);
   } catch (error) {
     console.error(`Job scraping failed for request ${requestId}:`, error);
     
