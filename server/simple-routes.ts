@@ -604,6 +604,8 @@ Format the email with proper greeting and sign-off.`;
   
   // Comprehensive resume upload endpoint supporting multiple file types
   app.post("/api/resume/upload", requireAuth, upload.any(), async (req, res) => {
+    console.log(`[RESUME-UPLOAD] Received request - Files: ${req.files?.length || 0}, Body keys: ${Object.keys(req.body || {})}`);
+    console.log(`[RESUME-UPLOAD] Files:`, req.files);
     try {
       let resumeText = '';
       let fileData: string | undefined;
@@ -701,10 +703,65 @@ Format the email with proper greeting and sign-off.`;
     }
   });
   
-  // Alternative endpoint for backward compatibility  
-  app.post("/api/upload-resume", requireAuth, upload.single('resume'), async (req, res) => {
-    // Redirect to the main upload endpoint
-    return app._router.handle({ ...req, url: '/api/resume/upload' }, res);
+  // Alternative endpoint for backward compatibility using same configuration
+  app.post("/api/upload-resume", requireAuth, upload.any(), async (req, res) => {
+    // Use the same logic as main upload endpoint
+    try {
+      let resumeText = '';
+      let fileData: string | undefined;
+      let fileName: string | undefined;
+      let mimeType: string | undefined;
+      
+      const uploadedFile = req.files?.[0] || req.file;
+      if (uploadedFile) {
+        fileName = uploadedFile.originalname;
+        mimeType = uploadedFile.mimetype;
+        fileData = uploadedFile.buffer.toString('base64');
+        
+        console.log(`[UPLOAD-RESUME] Processing file: ${fileName}, type: ${mimeType}, size: ${uploadedFile.buffer.length} bytes`);
+        
+        if (uploadedFile.mimetype === 'application/pdf') {
+          const pdfParse = require('pdf-parse');
+          try {
+            const pdfData = await pdfParse(uploadedFile.buffer);
+            resumeText = pdfData.text;
+          } catch (error) {
+            console.error('PDF parsing error:', error);
+            resumeText = '';
+          }
+        } else if (uploadedFile.mimetype.startsWith('text/')) {
+          resumeText = uploadedFile.buffer.toString('utf-8');
+        }
+      } else if (req.body.resumeText) {
+        resumeText = req.body.resumeText;
+        fileName = 'resume.txt';
+        mimeType = 'text/plain';
+        fileData = Buffer.from(resumeText).toString('base64');
+      }
+
+      if (!resumeText && !fileData) {
+        return res.status(400).json({ error: 'No resume content provided' });
+      }
+
+      await storage.updateUserResume(
+        req.user!.id,
+        resumeText || '',
+        fileName || 'resume.txt',
+        fileData,
+        mimeType
+      );
+
+      res.json({ 
+        success: true, 
+        message: 'Resume uploaded successfully',
+        fileName,
+        textExtracted: !!resumeText,
+        textLength: resumeText?.length || 0
+      });
+    } catch (error) {
+      console.error('[UPLOAD-RESUME] Error:', error);
+      res.status(500).json({ error: 'Failed to upload resume', details: error.message });
+    }
   });
 
   // === FEEDBACK ROUTES ===
