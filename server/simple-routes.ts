@@ -9,6 +9,7 @@ import multer from "multer";
 import { google } from "googleapis";
 import passport from './passport-config';
 import { storage } from './storage';
+import { scrapeLinkedInJobs, generateLinkedInSearchUrl } from './apify-scraper';
 // import PDFParse from 'pdf-parse'; // Commenting out for now due to import issue
 
 // Extend Express Request type to include user
@@ -29,6 +30,59 @@ declare module 'express-session' {
 
 const upload = multer({ storage: multer.memoryStorage() });
 const openai = process.env.OPENAI_API_KEY ? new OpenAI({ apiKey: process.env.OPENAI_API_KEY }) : null;
+
+// Background job processing function
+async function processJobScrapingAsync(requestId: string, linkedinUrl: string) {
+  try {
+    console.log(`Starting background job scraping for request ${requestId}`);
+    
+    // Update status to processing
+    await db
+      .update(jobScrapingRequests)
+      .set({ status: 'processing' })
+      .where(eq(jobScrapingRequests.id, requestId));
+
+    // Scrape jobs using Apify
+    const scrapedJobs = await scrapeLinkedInJobs({
+      linkedinUrl,
+      maxResults: 50
+    });
+
+    console.log(`Scraped ${scrapedJobs.length} jobs for request ${requestId}`);
+
+    // Update with results
+    await db
+      .update(jobScrapingRequests)
+      .set({
+        status: 'completed',
+        results: {
+          message: `Successfully scraped ${scrapedJobs.length} jobs from LinkedIn`,
+          jobsFound: scrapedJobs.length,
+          jobs: scrapedJobs,
+          enrichedResults: {
+            totalCount: scrapedJobs.length,
+            canApplyCount: scrapedJobs.filter(job => job.applyUrl).length
+          }
+        },
+        completedAt: new Date()
+      })
+      .where(eq(jobScrapingRequests.id, requestId));
+
+    console.log(`Job scraping completed for request ${requestId}`);
+  } catch (error) {
+    console.error(`Job scraping failed for request ${requestId}:`, error);
+    
+    // Update with error
+    await db
+      .update(jobScrapingRequests)
+      .set({
+        status: 'failed',
+        errorMessage: error.message,
+        completedAt: new Date()
+      })
+      .where(eq(jobScrapingRequests.id, requestId));
+  }
+}
 
 // Simple auth middleware
 async function requireAuth(req: Request, res: Response, next: NextFunction) {
@@ -281,24 +335,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
       })
       .returning();
 
-    // For now, simulate processing by marking as completed after a delay
-    setTimeout(async () => {
-      await db
-        .update(jobScrapingRequests)
-        .set({ 
-          status: 'completed',
-          results: { 
-            message: 'Job scraping completed successfully!',
-            jobsFound: 5,
-            enrichedResults: {
-              totalCount: 5,
-              canApplyCount: 3
-            }
-          },
-          completedAt: new Date()
-        })
-        .where(eq(jobScrapingRequests.id, request.id));
-    }, 2000);
+    // Process job scraping in background
+    processJobScrapingAsync(request.id, linkedinUrl);
     
     res.json({ requestId: request.id });
   });
@@ -335,20 +373,16 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.post("/api/generate-linkedin-url", requireAuth, async (req, res) => {
     const { keyword, location, workType } = req.body;
     
-    if (!keyword || !location || !workType) {
-      return res.status(400).json({ error: 'Missing required parameters' });
+    if (!keyword || !location) {
+      return res.status(400).json({ error: 'Missing required parameters: keyword and location' });
     }
 
     try {
-      // Simple LinkedIn URL generation
-      const baseUrl = 'https://www.linkedin.com/jobs/search';
-      const params = new URLSearchParams({
-        keywords: keyword,
-        location: location,
-        f_WT: workType // 1=Onsite, 2=Remote, 3=Hybrid
-      });
-      
-      const linkedinUrl = `${baseUrl}?${params.toString()}`;
+      const linkedinUrl = await generateLinkedInSearchUrl(
+        keyword,
+        location,
+        workType || 'remote'
+      );
       
       res.json({ 
         linkedinUrl,
@@ -408,8 +442,9 @@ Format the email with proper greeting and sign-off.`;
         return res.status(503).json({ error: 'OpenAI service not configured. Please configure OPENAI_API_KEY environment variable.' });
       }
       
+      // the newest OpenAI model is "gpt-5" which was released August 7, 2025. do not change this unless explicitly requested by the user
       const completion = await openai.chat.completions.create({
-        model: "gpt-3.5-turbo",
+        model: "gpt-5",
         messages: [
           {
             role: "system",
