@@ -796,13 +796,22 @@ export async function registerRoutes(app: Express): Promise<Server> {
       return res.status(404).json({ error: 'Request not found' });
     }
 
+    // Disable caching to ensure fresh data
+    res.set({
+      'Cache-Control': 'no-cache, no-store, must-revalidate',
+      'Pragma': 'no-cache',
+      'Expires': '0'
+    });
+
     res.json({
       id: request.id,
       status: request.status,
       results: request.results, // Original scraped jobs
-      filteredResults: request.filtered_results, // Quality filtered jobs
+      filteredResults: request.filtered_results, // Quality filtered jobs with canApply status
       enrichedResults: request.enriched_results, // Jobs with contact emails
       totalJobsFound: request.total_jobs_found,
+      freeJobsShown: request.free_jobs_shown || 0, // Jobs with contacts (Free plan)
+      proJobsShown: request.pro_jobs_shown || 0, // Jobs without contacts (Pro plan)
       error: request.errorMessage,
     });
   });
