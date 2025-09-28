@@ -732,14 +732,12 @@ export async function registerRoutes(app: Express): Promise<Server> {
       );
 
     // Get recent searches for history display
-    console.log('🔍 DEBUG: Fetching recent searches for user:', req.user!.id);
     const recentSearches = await db
       .select()
       .from(jobScrapingRequests)
       .where(eq(jobScrapingRequests.userId, req.user!.id))
       .orderBy(desc(jobScrapingRequests.createdAt))
       .limit(10);
-    console.log('🔍 DEBUG: Found', recentSearches.length, 'recent searches');
 
     // Format recent searches with proper enrichedResults structure
     const formattedSearches = recentSearches.map(search => {
@@ -848,19 +846,19 @@ export async function registerRoutes(app: Express): Promise<Server> {
       id: request.id,
       status: request.status,
       results: request.results, // Original scraped jobs
-      filteredResults: request.filtered_results, // Quality filtered jobs with canApply status
-      enrichedJobs: request.filtered_results, // Jobs array with canApply status
+      filteredResults: request.filteredResults || request.filtered_results, // Quality filtered jobs with canApply status
+      enrichedJobs: request.filteredResults || request.filtered_results, // Jobs array with canApply status
       enrichedResults: {
         // Frontend expects an object with these fields!
-        jobs: request.filtered_results || [],
-        freeJobs: request.free_jobs_shown || 0,
-        lockedJobs: request.pro_jobs_shown || 0,
-        canApplyCount: request.free_jobs_shown || 0,
+        jobs: request.filteredResults || request.filtered_results || [],
+        freeJobs: request.freeJobsShown || request.free_jobs_shown || 0,
+        lockedJobs: request.proJobsShown || request.pro_jobs_shown || 0,
+        canApplyCount: request.freeJobsShown || request.free_jobs_shown || 0,
         fakeTotalJobs: fakeTotalJobs
       },
-      totalJobsFound: request.total_jobs_found,
-      freeJobsShown: request.free_jobs_shown || 0, // Jobs with contacts (Free plan)
-      proJobsShown: request.pro_jobs_shown || 0, // Jobs without contacts (Pro plan)
+      totalJobsFound: request.totalJobsFound || request.total_jobs_found,
+      freeJobsShown: request.freeJobsShown || request.free_jobs_shown || 0, // Jobs with contacts (Free plan)
+      proJobsShown: request.proJobsShown || request.pro_jobs_shown || 0, // Jobs without contacts (Pro plan)
       error: request.errorMessage,
     });
   });
