@@ -34,8 +34,8 @@ export async function scrapeLinkedInJobs(
   try {
     console.log('Starting LinkedIn job scraping with Apify...', { linkedinUrl: request.linkedinUrl });
 
-    // Use curious_coder's LinkedIn Jobs Scraper - >98% success rate
-    const run = await apifyClient.actor('curious_coder/linkedin-jobs-search-scraper').call({
+    // Use curl_craper's LinkedIn Jobs Scraper (from user's Apify dashboard)
+    const run = await apifyClient.actor('curl_craper/linkedin-jobs-scraper').call({
       startUrls: [{ url: request.linkedinUrl }],
       maxResults: request.maxResults || 50,
       proxy: {
