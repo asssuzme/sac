@@ -803,13 +803,32 @@ export async function registerRoutes(app: Express): Promise<Server> {
       'Expires': '0'
     });
 
+    // Calculate fake total for display consistency
+    let fakeTotalJobs = 1315; // Default for consistency with UI
+    if (request.id) {
+      // Generate consistent number based on request ID
+      let hash = 0;
+      for (let i = 0; i < request.id.length; i++) {
+        hash = ((hash << 5) - hash) + request.id.charCodeAt(i);
+        hash = hash & hash;
+      }
+      fakeTotalJobs = 500 + Math.abs(hash % 1501); // 500-2000
+    }
+
     res.json({
       id: request.id,
       status: request.status,
       results: request.results, // Original scraped jobs
       filteredResults: request.filtered_results, // Quality filtered jobs with canApply status
-      enrichedJobs: request.filtered_results, // FIXED: Frontend expects this field with canApply status!
-      enrichedResults: request.enriched_results, // Raw jobs with contact emails
+      enrichedJobs: request.filtered_results, // Jobs array with canApply status
+      enrichedResults: {
+        // Frontend expects an object with these fields!
+        jobs: request.filtered_results || [],
+        freeJobs: request.free_jobs_shown || 0,
+        lockedJobs: request.pro_jobs_shown || 0,
+        canApplyCount: request.free_jobs_shown || 0,
+        fakeTotalJobs: fakeTotalJobs
+      },
       totalJobsFound: request.total_jobs_found,
       freeJobsShown: request.free_jobs_shown || 0, // Jobs with contacts (Free plan)
       proJobsShown: request.pro_jobs_shown || 0, // Jobs without contacts (Pro plan)
