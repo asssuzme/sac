@@ -36,12 +36,9 @@ export async function scrapeLinkedInJobs(
 
     // Use curious_coder LinkedIn Jobs Scraper actor (free alternative)
     const run = await apifyClient.actor('curious_coder/linkedin-jobs-scraper').call({
-      urls: [request.linkedinUrl],     // The LinkedIn search URL as array
-      count: 100,                      // Fixed at 100 jobs to control costs
-      proxy: {
-        useApifyProxy: true,
-        apifyProxyGroups: ['RESIDENTIAL']
-      }
+      count: 100,
+      scrapeCompany: true,
+      urls: [request.linkedinUrl]
     });
 
     console.log('Apify run started:', run.id);
