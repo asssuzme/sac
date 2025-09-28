@@ -10,6 +10,7 @@ import { google } from "googleapis";
 import passport from './passport-config';
 import { storage } from './storage';
 import { scrapeLinkedInJobs, generateLinkedInSearchUrl } from './apify-scraper';
+import path from 'path';
 // import PDFParse from 'pdf-parse'; // Commenting out for now due to import issue
 
 // Extend Express Request type to include user
@@ -28,7 +29,47 @@ declare module 'express-session' {
   }
 }
 
-const upload = multer({ storage: multer.memoryStorage() });
+// Enhanced multer configuration with security features
+const upload = multer({
+  storage: multer.memoryStorage(),
+  limits: {
+    fileSize: 25 * 1024 * 1024, // 25MB limit for large documents and images
+    files: 5, // Maximum 5 files per request
+    fieldSize: 10 * 1024 * 1024, // 10MB per field
+    fields: 10, // Maximum number of non-file fields
+  },
+  fileFilter: (req, file, cb) => {
+    // Security: Validate file types
+    const allowedMimeTypes = [
+      'text/plain',
+      'application/pdf',
+      'application/vnd.openxmlformats-officedocument.wordprocessingml.document', // .docx
+      'application/msword', // .doc
+      'image/jpeg',
+      'image/jpg', 
+      'image/png',
+      'image/webp',
+      'image/tiff'
+    ];
+    
+    const allowedExtensions = ['.txt', '.pdf', '.doc', '.docx', '.jpg', '.jpeg', '.png', '.webp', '.tiff'];
+    const fileExtension = path.extname(file.originalname || '').toLowerCase();
+    
+    // Check both MIME type and file extension for security
+    if (allowedMimeTypes.includes(file.mimetype) && allowedExtensions.includes(fileExtension)) {
+      // Additional security: Check for suspicious file names
+      if (file.originalname.includes('..') || file.originalname.includes('/') || file.originalname.includes('\\')) {
+        console.log(`[SECURITY] Rejected suspicious filename: ${file.originalname}`);
+        cb(new Error('Invalid file name detected'), false);
+        return;
+      }
+      cb(null, true);
+    } else {
+      console.log(`[SECURITY] Rejected file: ${file.originalname}, MIME: ${file.mimetype}, Extension: ${fileExtension}`);
+      cb(new Error(`Unsupported file type. Allowed: ${allowedExtensions.join(', ')}`), false);
+    }
+  }
+});
 const openai = process.env.OPENAI_API_KEY ? new OpenAI({ apiKey: process.env.OPENAI_API_KEY }) : null;
 
 // Background job processing function
