@@ -602,6 +602,7 @@ Format the email with proper greeting and sign-off.`;
 
   // === RESUME ROUTES ===
   
+  // Comprehensive resume upload endpoint supporting multiple file types
   app.post("/api/resume/upload", requireAuth, upload.single('resume'), async (req, res) => {
     try {
       let resumeText = '';
@@ -610,24 +611,50 @@ Format the email with proper greeting and sign-off.`;
       let mimeType: string | undefined;
       
       if (req.file) {
-        // Handle file upload (PDF, TXT, etc.)
+        // Handle file upload (PDF, TXT, DOCX, Images, etc.)
         fileName = req.file.originalname;
         mimeType = req.file.mimetype;
         fileData = req.file.buffer.toString('base64');
         
-        // Extract text from PDF if needed
+        console.log(`Processing file: ${fileName}, type: ${mimeType}, size: ${req.file.buffer.length} bytes`);
+        
         if (req.file.mimetype === 'application/pdf') {
+          // Extract text from PDF
           const pdfParse = require('pdf-parse');
           try {
             const pdfData = await pdfParse(req.file.buffer);
             resumeText = pdfData.text;
+            console.log(`Extracted ${resumeText.length} characters from PDF`);
           } catch (error) {
             console.error('PDF parsing error:', error);
             resumeText = ''; // Still store the file even if text extraction fails
           }
+        } else if (req.file.mimetype === 'application/vnd.openxmlformats-officedocument.wordprocessingml.document') {
+          // Extract text from DOCX
+          const mammoth = require('mammoth');
+          try {
+            const result = await mammoth.extractRawText({ buffer: req.file.buffer });
+            resumeText = result.value;
+            console.log(`Extracted ${resumeText.length} characters from DOCX`);
+          } catch (error) {
+            console.error('DOCX parsing error:', error);
+            resumeText = '';
+          }
         } else if (req.file.mimetype.startsWith('text/')) {
           // For text files, use the content directly
           resumeText = req.file.buffer.toString('utf-8');
+          console.log(`Read ${resumeText.length} characters from text file`);
+        } else if (req.file.mimetype.startsWith('image/')) {
+          // Extract text from images using OCR
+          const Tesseract = require('tesseract.js');
+          try {
+            const { data: { text } } = await Tesseract.recognize(req.file.buffer, 'eng');
+            resumeText = text.trim();
+            console.log(`Extracted ${resumeText.length} characters from image via OCR`);
+          } catch (error) {
+            console.error('OCR parsing error:', error);
+            resumeText = '';
+          }
         }
       } else if (req.body.resumeText) {
         // Text upload (from textarea)
@@ -635,6 +662,7 @@ Format the email with proper greeting and sign-off.`;
         fileName = 'resume.txt';
         mimeType = 'text/plain';
         fileData = Buffer.from(resumeText).toString('base64');
+        console.log(`Received text upload: ${resumeText.length} characters`);
       }
 
       if (!resumeText && !fileData) {
@@ -650,19 +678,32 @@ Format the email with proper greeting and sign-off.`;
         mimeType
       );
 
-      console.log('Resume uploaded:', { 
+      console.log('Resume uploaded successfully:', { 
         userId: req.user!.id, 
         fileName, 
         hasFileData: !!fileData,
         fileDataLength: fileData?.length,
-        mimeType 
+        mimeType,
+        textLength: resumeText?.length || 0
       });
 
-      res.json({ success: true });
+      res.json({ 
+        success: true, 
+        message: 'Resume uploaded successfully',
+        fileName,
+        textExtracted: !!resumeText,
+        textLength: resumeText?.length || 0
+      });
     } catch (error) {
       console.error('Resume upload error:', error);
-      res.status(500).json({ error: 'Failed to upload resume' });
+      res.status(500).json({ error: 'Failed to upload resume', details: error.message });
     }
+  });
+  
+  // Alternative endpoint for backward compatibility  
+  app.post("/api/upload-resume", requireAuth, upload.single('resume'), async (req, res) => {
+    // Redirect to the main upload endpoint
+    return app._router.handle({ ...req, url: '/api/resume/upload' }, res);
   });
 
   // === FEEDBACK ROUTES ===

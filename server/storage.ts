@@ -33,8 +33,8 @@ export interface IStorage {
   getAllUsers(): Promise<User[]>;
   
   // Resume operations
-  updateUserResume(userId: string, resumeText: string, fileName: string): Promise<User | undefined>;
-  getUserResume(userId: string): Promise<{ resumeText: string | null; resumeFileName: string | null; resumeUploadedAt: Date | null } | undefined>;
+  updateUserResume(userId: string, resumeText: string, fileName: string, fileData?: string, mimeType?: string): Promise<User | undefined>;
+  getUserResume(userId: string): Promise<{ resumeText: string | null; resumeFileName: string | null; resumeFileData: string | null; resumeFileMimeType: string | null; resumeUploadedAt: Date | null } | undefined>;
   
   // Dashboard operations
   getDashboardStats(userId: string): Promise<{

@@ -16,12 +16,21 @@ export function ResumeUpload({ onResumeTextChange }: ResumeUploadProps) {
     const file = event.target.files?.[0];
     if (!file) return;
 
-    // Check file type
-    const validTypes = ['text/plain', 'application/pdf', 'image/jpeg', 'image/jpg', 'image/png', 'image/webp'];
+    // Check file type - support docs, PDF, images, and text
+    const validTypes = [
+      'text/plain', 
+      'application/pdf', 
+      'application/vnd.openxmlformats-officedocument.wordprocessingml.document', // .docx
+      'application/msword', // .doc
+      'image/jpeg', 
+      'image/jpg', 
+      'image/png', 
+      'image/webp'
+    ];
     if (!validTypes.includes(file.type)) {
       toast({
         title: "Invalid file type",
-        description: "Please upload a .txt, .pdf, .jpg, .jpeg, .png, or .webp file",
+        description: "Please upload a .txt, .pdf, .doc, .docx, .jpg, .jpeg, .png, or .webp file",
         variant: "destructive",
       });
       return;
@@ -51,8 +60,11 @@ export function ResumeUpload({ onResumeTextChange }: ResumeUploadProps) {
         const text = await file.text();
         const cleanedText = text.replace(/\0/g, '').trim();
         onResumeTextChange(cleanedText);
-      } else if (file.type === 'application/pdf' || file.type.startsWith('image/')) {
-        // Handle PDF and image files by sending to server for parsing and storage
+      } else if (file.type === 'application/pdf' || 
+                 file.type === 'application/vnd.openxmlformats-officedocument.wordprocessingml.document' ||
+                 file.type === 'application/msword' ||
+                 file.type.startsWith('image/')) {
+        // Handle PDF, Word docs, and image files by sending to server for parsing and storage
         const formData = new FormData();
         formData.append('resume', file);
         
@@ -67,13 +79,16 @@ export function ResumeUpload({ onResumeTextChange }: ResumeUploadProps) {
           throw new Error(error.error || 'Failed to process file');
         }
         
-        // For PDFs and images, just indicate successful upload
-        // The server has extracted text and stored the full file
-        onResumeTextChange(`Resume uploaded: ${file.name}`);
+        // Get response and show extracted text length
+        const result = await response.json();
+        const message = result.textLength > 0 
+          ? `Resume uploaded: ${file.name} (${result.textLength} characters extracted)`
+          : `Resume uploaded: ${file.name} (file stored, text extraction may have failed)`;
+        onResumeTextChange(message);
       } else {
         toast({
           title: "File format not supported",
-          description: "Only .txt, .pdf, .jpg, .jpeg, .png, and .webp files are supported.",
+          description: "Only .txt, .pdf, .doc, .docx, .jpg, .jpeg, .png, and .webp files are supported.",
           variant: "destructive",
         });
         setFileName(null);
