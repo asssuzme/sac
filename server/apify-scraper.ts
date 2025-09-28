@@ -61,14 +61,36 @@ export async function scrapeLinkedInJobs(
       const jobTitle = item.title || item.jobTitle || item.position || '';
       const companyName = item.company || item.companyName || item.employer || '';
       
-      // Extract job poster information from various possible fields
-      const jobPosterUrl = item.jobPosterUrl || item.postedByUrl || item.recruiterUrl || 
-                           item.hrUrl || item.contactUrl || item.postedBy?.url || 
-                           item.poster?.url || item.recruiter?.profileUrl || null;
+      // Extract job poster information from various possible fields and description text
+      let jobPosterUrl = item.jobPosterUrl || item.postedByUrl || item.recruiterUrl || 
+                         item.hrUrl || item.contactUrl || item.postedBy?.url || 
+                         item.poster?.url || item.recruiter?.profileUrl || null;
       
-      const jobPosterName = item.jobPosterName || item.postedByName || item.recruiterName || 
-                           item.hrName || item.contactName || item.postedBy?.name || 
-                           item.poster?.name || item.recruiter?.name || null;
+      let jobPosterName = item.jobPosterName || item.postedByName || item.recruiterName || 
+                          item.hrName || item.contactName || item.postedBy?.name || 
+                          item.poster?.name || item.recruiter?.name || null;
+      
+      // If not found in fields, try to extract from description text
+      if (!jobPosterName && item.descriptionText) {
+        const posterMatch = item.descriptionText.match(/This job was posted by ([^\.]+)/i);
+        if (posterMatch) {
+          jobPosterName = posterMatch[1].trim();
+        }
+      }
+      
+      // Also check other possible field names in the response
+      if (!jobPosterUrl) {
+        // Check if there are any LinkedIn profile URLs in the raw response
+        const possibleFields = ['jobPoster', 'hiringManager', 'recruiter', 'contactPerson', 'postedBy'];
+        for (const field of possibleFields) {
+          if (item[field] && typeof item[field] === 'object') {
+            if (item[field].linkedinUrl) jobPosterUrl = item[field].linkedinUrl;
+            if (item[field].profileUrl) jobPosterUrl = item[field].profileUrl;
+            if (item[field].url && item[field].url.includes('linkedin.com/in/')) jobPosterUrl = item[field].url;
+            if (!jobPosterName && item[field].name) jobPosterName = item[field].name;
+          }
+        }
+      }
       
       const mapped = {
         jobTitle: jobTitle || 'Unknown Position',
