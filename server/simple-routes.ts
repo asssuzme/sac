@@ -474,9 +474,9 @@ async function processJobScrapingAsync(requestId: string, linkedinUrl: string) {
       .set({
         status: 'completed',
         results: scrapedJobs, // Original scraped jobs
-        filtered_results: qualityJobs, // Filtered quality jobs
-        enriched_results: enrichedJobs, // Enriched jobs with contact emails
-        total_jobs_found: scrapedJobs.length,
+        filteredResults: qualityJobs, // Filtered quality jobs
+        enrichedResults: enrichedJobs, // Enriched jobs with contact emails
+        totalJobsFound: scrapedJobs.length,
         completedAt: new Date()
       })
       .where(eq(jobScrapingRequests.id, requestId));
