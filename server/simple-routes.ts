@@ -10,6 +10,7 @@ import { google } from "googleapis";
 import passport from './passport-config';
 import { storage } from './storage';
 import { scrapeLinkedInJobs, generateLinkedInSearchUrl } from './apify-scraper';
+import { ApifyClient } from 'apify-client';
 import path from 'path';
 
 // Extend Express Request type to include user
