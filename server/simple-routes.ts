@@ -719,11 +719,22 @@ export async function registerRoutes(app: Express): Promise<Server> {
         )
       );
 
+    // Get recent searches for history display
+    console.log('🔍 DEBUG: Fetching recent searches for user:', req.user!.id);
+    const recentSearches = await db
+      .select()
+      .from(jobScrapingRequests)
+      .where(eq(jobScrapingRequests.userId, req.user!.id))
+      .orderBy(desc(jobScrapingRequests.createdAt))
+      .limit(10);
+    console.log('🔍 DEBUG: Found', recentSearches.length, 'recent searches');
+
     res.json({
       totalJobsScraped: scrapingCount?.count || 0,
       totalApplicationsSent: applicationCount?.count || 0,
       activeJobSearches: recentScrapingCount?.count || 0,
       pendingApplications: 0,
+      recentSearches: recentSearches,
     });
   });
 

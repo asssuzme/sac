@@ -62,13 +62,16 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       );
 
     // Get recent searches for history display
+    console.log('🔍 DEBUG: Fetching recent searches for user:', payload.userId);
     const recentSearches = await db
       .select()
       .from(jobScrapingRequests)
       .where(eq(jobScrapingRequests.userId, payload.userId))
       .orderBy(desc(jobScrapingRequests.createdAt))
       .limit(10);
+    console.log('🔍 DEBUG: Found', recentSearches.length, 'recent searches');
 
+    res.setHeader('Cache-Control', 'no-cache, no-store, must-revalidate');
     res.status(200).json({
       totalJobsScraped: scrapingCount?.count || 0,
       totalApplicationsSent: applicationCount?.count || 0,
