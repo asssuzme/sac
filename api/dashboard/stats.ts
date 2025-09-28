@@ -3,7 +3,7 @@ import { setCorsHeaders } from '../_lib/cors';
 import { verifyToken, extractToken } from '../_lib/auth';
 import { getDb } from '../_lib/db';
 import { jobScrapingRequests, emailApplications } from '../../shared/schema';
-import { eq, and, gte } from 'drizzle-orm';
+import { eq, and, gte, desc, sql } from 'drizzle-orm';
 
 export default async function handler(req: VercelRequest, res: VercelResponse) {
   // Handle CORS
@@ -61,11 +61,20 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
         )
       );
 
+    // Get recent searches for history display
+    const recentSearches = await db
+      .select()
+      .from(jobScrapingRequests)
+      .where(eq(jobScrapingRequests.userId, payload.userId))
+      .orderBy(desc(jobScrapingRequests.createdAt))
+      .limit(10);
+
     res.status(200).json({
       totalJobsScraped: scrapingCount?.count || 0,
       totalApplicationsSent: applicationCount?.count || 0,
       activeJobSearches: recentScrapingCount?.count || 0,
       pendingApplications: 0,
+      recentSearches: recentSearches,
       recentActivity: {
         jobsScrapedThisWeek: recentScrapingCount?.count || 0,
         applicationsSentThisWeek: recentApplicationCount?.count || 0,
@@ -76,5 +85,3 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     res.status(500).json({ error: 'Internal server error' });
   }
 }
-
-import { sql } from 'drizzle-orm';
