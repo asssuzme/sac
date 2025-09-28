@@ -34,10 +34,10 @@ export async function scrapeLinkedInJobs(
   try {
     console.log('Starting LinkedIn job scraping with Apify...', { linkedinUrl: request.linkedinUrl });
 
-    // Use a more reliable LinkedIn Jobs Scraper actor
-    const run = await apifyClient.actor('bebity/linkedin-jobs-scraper').call({
-      searchQueries: [request.linkedinUrl],  // The LinkedIn search URL
-      maxResults: 100,                       // Fixed at 100 jobs to control costs
+    // Use curious_coder LinkedIn Jobs Scraper actor (free alternative)
+    const run = await apifyClient.actor('curious_coder/linkedin-jobs-scraper').call({
+      searchUrl: request.linkedinUrl,  // The LinkedIn search URL
+      maxResults: 100,                 // Fixed at 100 jobs to control costs
       proxy: {
         useApifyProxy: true,
         apifyProxyGroups: ['RESIDENTIAL']
