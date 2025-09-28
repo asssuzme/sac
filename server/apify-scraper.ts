@@ -34,14 +34,11 @@ export async function scrapeLinkedInJobs(
   try {
     console.log('Starting LinkedIn job scraping with Apify...', { linkedinUrl: request.linkedinUrl });
 
-    // Use curious_coder's LinkedIn Jobs Scraper with CORRECT input format
+    // Use curious_coder's LinkedIn Jobs Scraper with EXACT input format from user
     const run = await apifyClient.actor('curious_coder/linkedin-jobs-scraper').call({
-      urls: [request.linkedinUrl], // CORRECT: "urls" not "startUrls"  
-      resultsLimit: request.maxResults || 50, // CORRECT: "resultsLimit" not "maxResults"
-      proxy: {
-        useApifyProxy: true,
-        apifyProxyGroups: ['RESIDENTIAL'],
-      },
+      count: Math.max(request.maxResults || 100, 100),  // Minimum 100 required by actor
+      scrapeCompany: true,                               // Also scrape company details
+      urls: [request.linkedinUrl]                        // Array of LinkedIn URLs
     });
 
     console.log('Apify run started:', run.id);
