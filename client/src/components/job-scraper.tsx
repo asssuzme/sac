@@ -50,6 +50,7 @@ interface JobScrapingResponse {
   results?: any;
   filteredResults?: any;
   enrichedResults?: any;
+  totalJobsFound?: number;
 }
 
 // Define new schema for job search form
@@ -255,12 +256,16 @@ export function JobScraper({ onComplete }: JobScraperProps = {}) {
     if (isAborted) return; // Don't process completion if aborted
     
     if (scrapingResult?.status === 'completed' && scrapingResult.enrichedResults) {
-      const results = scrapingResult.enrichedResults as any;
+      const enrichedJobs = scrapingResult.enrichedResults as any[];
+      const totalJobs = scrapingResult.totalJobsFound || scrapingResult.results?.length || 0;
+      const filteredCount = scrapingResult.filteredResults?.length || 0;
+      const enrichedCount = enrichedJobs?.length || 0;
+      const withContactsCount = enrichedJobs?.filter((job: any) => job.contactEmail || job.jobPosterEmail).length || 0;
       
       // Show completion message
       toast({
         title: "Search Complete",
-        description: `Found ${results.totalCount || 0} jobs, ${results.canApplyCount || 0} with contact information`
+        description: `Found ${totalJobs} jobs, filtered to ${filteredCount} quality leads, enriched ${withContactsCount} with contact emails`
       });
 
       // Invalidate dashboard stats to refresh

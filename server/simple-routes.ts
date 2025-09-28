@@ -253,21 +253,15 @@ async function processJobScrapingAsync(requestId: string, linkedinUrl: string) {
     const enrichedJobs = await enrichJobsWithProfiles(qualityJobs);
     console.log(`Enriched ${enrichedJobs.filter(j => j.contactEmail).length} jobs with contact emails`);
 
-    // Update with results
+    // Update with results - save to separate columns for proper workflow tracking
     await db
       .update(jobScrapingRequests)
       .set({
         status: 'completed',
-        results: {
-          message: `Successfully scraped ${scrapedJobs.length} jobs, enriched ${enrichedJobs.filter(j => j.contactEmail).length} with emails`,
-          jobsFound: scrapedJobs.length,
-          jobs: enrichedJobs,
-          enrichedResults: {
-            totalCount: enrichedJobs.length,
-            canApplyCount: enrichedJobs.filter(job => job.canApply).length,
-            emailsFound: enrichedJobs.filter(job => job.contactEmail).length
-          }
-        },
+        results: scrapedJobs, // Original scraped jobs
+        filtered_results: qualityJobs, // Filtered quality jobs
+        enriched_results: enrichedJobs, // Enriched jobs with contact emails
+        total_jobs_found: scrapedJobs.length,
         completedAt: new Date()
       })
       .where(eq(jobScrapingRequests.id, requestId));
@@ -567,8 +561,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
     res.json({
       id: request.id,
       status: request.status,
-      results: request.results,
-      enrichedResults: request.results?.enrichedResults || null,
+      results: request.results, // Original scraped jobs
+      filteredResults: request.filtered_results, // Quality filtered jobs
+      enrichedResults: request.enriched_results, // Jobs with contact emails
+      totalJobsFound: request.total_jobs_found,
       error: request.errorMessage,
     });
   });
