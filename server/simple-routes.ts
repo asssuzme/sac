@@ -468,15 +468,27 @@ async function processJobScrapingAsync(requestId: string, linkedinUrl: string) {
       }
     }
 
+    // Mark jobs with contacts as canApply: true for Free plan
+    const jobsWithCanApplyStatus = enrichedJobs.map(job => ({
+      ...job,
+      canApply: !!(job.contactEmail || job.jobPosterEmail)
+    }));
+    
+    // Calculate free/pro plan counts
+    const freeJobsCount = jobsWithCanApplyStatus.filter(job => job.canApply).length;
+    const proJobsCount = jobsWithCanApplyStatus.filter(job => !job.canApply).length;
+
     // Update with results - save to separate columns for proper workflow tracking
     await db
       .update(jobScrapingRequests)
       .set({
         status: 'completed',
         results: scrapedJobs, // Original scraped jobs
-        filteredResults: qualityJobs, // Filtered quality jobs
-        enrichedResults: enrichedJobs, // Enriched jobs with contact emails
+        filteredResults: jobsWithCanApplyStatus, // Jobs with proper canApply status
+        enrichedResults: enrichedJobs, // Raw enriched jobs with contact emails
         totalJobsFound: scrapedJobs.length,
+        freeJobsShown: freeJobsCount, // Jobs with contacts (Free plan)
+        proJobsShown: proJobsCount, // Jobs without contacts (Pro plan)
         completedAt: new Date()
       })
       .where(eq(jobScrapingRequests.id, requestId));
