@@ -643,8 +643,74 @@ Format the email with proper greeting and sign-off.`;
 
   // === RESUME ROUTES ===
   
+  // Enhanced error handling middleware for file uploads
+  const handleUploadError = (error: any, req: Request, res: Response, next: NextFunction) => {
+    if (error instanceof multer.MulterError) {
+      console.log(`[UPLOAD-ERROR] MulterError: ${error.message}, Code: ${error.code}`);
+      
+      switch (error.code) {
+        case 'LIMIT_FILE_SIZE':
+          return res.status(413).json({ 
+            error: 'File too large', 
+            details: 'Maximum file size is 25MB. Please compress your file or use a smaller image.',
+            code: 'FILE_TOO_LARGE'
+          });
+        case 'LIMIT_FILES_COUNT':
+          return res.status(413).json({ 
+            error: 'Too many files', 
+            details: 'Maximum 5 files allowed per upload.',
+            code: 'TOO_MANY_FILES'
+          });
+        case 'LIMIT_FIELD_COUNT':
+          return res.status(413).json({ 
+            error: 'Too many form fields', 
+            details: 'Please reduce the number of form fields.',
+            code: 'TOO_MANY_FIELDS'
+          });
+        case 'LIMIT_UNEXPECTED_FILE':
+          return res.status(400).json({ 
+            error: 'Unexpected file field', 
+            details: 'The uploaded file field is not recognized.',
+            code: 'UNEXPECTED_FIELD'
+          });
+        default:
+          return res.status(400).json({ 
+            error: 'File upload error', 
+            details: error.message,
+            code: 'UPLOAD_ERROR'
+          });
+      }
+    } else if (error.message?.includes('Unsupported file type')) {
+      return res.status(400).json({ 
+        error: 'Invalid file type', 
+        details: error.message,
+        code: 'INVALID_FILE_TYPE'
+      });
+    } else if (error.message?.includes('Invalid file name')) {
+      return res.status(400).json({ 
+        error: 'Invalid file name', 
+        details: 'File name contains invalid characters. Please rename your file.',
+        code: 'INVALID_FILENAME'
+      });
+    }
+    
+    console.error('[UPLOAD-ERROR] Unexpected error:', error);
+    return res.status(500).json({ 
+      error: 'Upload failed', 
+      details: 'An unexpected error occurred during file upload.',
+      code: 'INTERNAL_ERROR'
+    });
+  };
+
   // Comprehensive resume upload endpoint supporting multiple file types
-  app.post("/api/resume/upload", requireAuth, upload.any(), async (req, res) => {
+  app.post("/api/resume/upload", requireAuth, (req, res, next) => {
+    upload.any()(req, res, (err) => {
+      if (err) {
+        return handleUploadError(err, req, res, next);
+      }
+      next();
+    });
+  }, async (req, res) => {
     console.log(`[RESUME-UPLOAD] Received request - Files: ${req.files?.length || 0}, Body keys: ${Object.keys(req.body || {})}`);
     console.log(`[RESUME-UPLOAD] Files:`, req.files);
     try {
@@ -733,14 +799,40 @@ Format the email with proper greeting and sign-off.`;
 
       res.json({ 
         success: true, 
-        message: 'Resume uploaded successfully',
+        message: 'Resume uploaded and processed successfully',
         fileName,
         textExtracted: !!resumeText,
-        textLength: resumeText?.length || 0
+        textLength: resumeText?.length || 0,
+        supportedFormats: ['.txt', '.pdf', '.doc', '.docx', '.jpg', '.jpeg', '.png', '.webp']
       });
     } catch (error) {
-      console.error('Resume upload error:', error);
-      res.status(500).json({ error: 'Failed to upload resume', details: error.message });
+      console.error('[RESUME-UPLOAD] Processing error:', error);
+      
+      if (error.message?.includes('PDF parsing')) {
+        res.status(422).json({ 
+          error: 'PDF processing failed', 
+          details: 'Unable to extract text from PDF. File saved but text extraction failed.',
+          code: 'PDF_PARSE_ERROR'
+        });
+      } else if (error.message?.includes('DOCX parsing')) {
+        res.status(422).json({ 
+          error: 'Document processing failed', 
+          details: 'Unable to extract text from Word document. File saved but text extraction failed.',
+          code: 'DOCX_PARSE_ERROR'
+        });
+      } else if (error.message?.includes('OCR')) {
+        res.status(422).json({ 
+          error: 'Image processing failed', 
+          details: 'Unable to extract text from image. File saved but OCR failed.',
+          code: 'OCR_ERROR'
+        });
+      } else {
+        res.status(500).json({ 
+          error: 'Resume processing failed', 
+          details: 'An error occurred while processing your resume.',
+          code: 'PROCESSING_ERROR'
+        });
+      }
     }
   });
   
