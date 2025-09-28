@@ -189,6 +189,8 @@ async function scrapeLinkedInProfile(job: any): Promise<any> {
     return null;
   }
   
+  console.log('✅ Found job poster URL for:', job.jobTitle, '→', job.jobPosterUrl);
+  
   try {
     const apifyClient = new ApifyClient({
       token: process.env.APIFY_API_KEY,

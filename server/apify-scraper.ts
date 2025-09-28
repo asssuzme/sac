@@ -14,6 +14,8 @@ export interface JobScrapingResult {
   postedDate?: string;
   experienceLevel?: string;
   workType?: string;
+  jobPosterUrl?: string;
+  jobPosterName?: string;
 }
 
 export interface ApifyJobScrapingRequest {
@@ -59,16 +61,27 @@ export async function scrapeLinkedInJobs(
       const jobTitle = item.title || item.jobTitle || item.position || '';
       const companyName = item.company || item.companyName || item.employer || '';
       
+      // Extract job poster information from various possible fields
+      const jobPosterUrl = item.jobPosterUrl || item.postedByUrl || item.recruiterUrl || 
+                           item.hrUrl || item.contactUrl || item.postedBy?.url || 
+                           item.poster?.url || item.recruiter?.profileUrl || null;
+      
+      const jobPosterName = item.jobPosterName || item.postedByName || item.recruiterName || 
+                           item.hrName || item.contactName || item.postedBy?.name || 
+                           item.poster?.name || item.recruiter?.name || null;
+      
       const mapped = {
         jobTitle: jobTitle || 'Unknown Position',
         companyName: companyName || 'Unknown Company',
         location: item.location || 'Not specified',
         salary: item.salary,
-        description: item.description || '',
+        description: item.description || item.descriptionText || '',
         applyUrl: item.url || item.link || request.linkedinUrl,
-        postedDate: item.postedDate || item.posted,
-        experienceLevel: item.experienceLevel || item.experience,
-        workType: item.workType || item.type,
+        postedDate: item.postedDate || item.posted || item.postedAt,
+        experienceLevel: item.experienceLevel || item.experience || item.seniorityLevel,
+        workType: item.workType || item.type || item.employmentType,
+        jobPosterUrl: jobPosterUrl,
+        jobPosterName: jobPosterName,
       };
       
       // Debug log for first few items
