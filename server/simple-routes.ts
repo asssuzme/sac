@@ -183,41 +183,42 @@ async function scrapeLinkedInProfile(job: any): Promise<any> {
     return null;
   }
   
+  // Check if we have a LinkedIn profile URL for the job poster
+  if (!job.jobPosterUrl || !job.jobPosterUrl.includes('linkedin.com/in/')) {
+    console.log('No LinkedIn profile URL available for job:', job.jobTitle);
+    return null;
+  }
+  
   try {
     const apifyClient = new ApifyClient({
       token: process.env.APIFY_API_KEY,
     });
     
-    // Use apify/email-extractor to find emails from company websites
-    // Since job URLs aren't profile URLs, we need to find emails differently
-    const run = await apifyClient.actor('apify/email-extractor').call({
-      urls: [job.companyWebsite || `https://${job.companyName.toLowerCase().replace(/[^a-z0-9]/g, '')}.com`],
-      maxPagesPerUrl: 5,
-      proxy: {
-        useApifyProxy: true,
-        apifyProxyGroups: ['RESIDENTIAL'],
-      },
+    // Use dev_fusion/Linkedin-Profile-Scraper to scrape LinkedIn profiles
+    console.log('Scraping LinkedIn profile:', job.jobPosterUrl);
+    const run = await apifyClient.actor('dev_fusion/Linkedin-Profile-Scraper').call({
+      profileUrls: [job.jobPosterUrl]
     });
     
     // Get the results
     const { items } = await apifyClient.dataset(run.defaultDatasetId).listItems();
     
     if (items && items.length > 0) {
-      const emailData = items[0];
-      // Extract the first valid email found
-      const emails = emailData.emails || [];
-      const contactEmail = emails.find((e: any) => 
-        e && !e.includes('noreply') && !e.includes('support') && !e.includes('info@')
-      ) || emails[0];
+      const profile = items[0];
+      console.log('Profile scraped successfully:', profile.name || profile.fullName);
       
-      if (contactEmail) {
+      // Check if the profile has contact information
+      if (profile.email || profile.contactInfo?.email) {
         return {
-          name: job.companyName + ' Hiring Team',
-          email: contactEmail,
-          profileUrl: job.applyUrl,
-          headline: `Hiring for ${job.jobTitle}`,
-          company: job.companyName,
+          name: profile.name || profile.fullName || job.jobPosterName || 'Hiring Manager',
+          email: profile.email || profile.contactInfo?.email,
+          profileUrl: job.jobPosterUrl,
+          headline: profile.headline || `Hiring for ${job.jobTitle}`,
+          company: profile.company || job.companyName,
+          phone: profile.phone || profile.contactInfo?.phone,
         };
+      } else {
+        console.log('No email found in LinkedIn profile for:', profile.name || profile.fullName);
       }
     }
     
