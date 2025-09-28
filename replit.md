@@ -6,6 +6,17 @@ ai-jobhunter.com is a web service designed to automate job applications. It scra
 ## User Preferences
 Preferred communication style: Technical and detailed explanations with specifics.
 
+## Recent Changes
+
+### September 28, 2025 - GitHub Preparation & Documentation
+- **CRITICAL BUG RESOLVED**: Fixed Free Plan vs Pro Plan display showing "0 unlocked jobs" instead of actual count
+- **TypeScript Cleanup**: Reduced errors from 49 to 37 through proper type casting and error handling
+- **Comprehensive Documentation**: Created README.md, DEVELOPER_GUIDE.md, and GITHUB_SETUP_GUIDE.md
+- **GitHub Ready**: All files organized and ready for GitHub push with proper .gitignore configuration
+- **API Response Fixes**: Corrected data structure mismatches between frontend expectations and backend responses
+- **Database Field Mapping**: Fixed snake_case vs camelCase field access issues in API responses
+- **Code Organization**: Cleaned up duplicate entries and organized project structure for production readiness
+
 ## System Architecture
 
 ### Frontend Architecture
