@@ -1210,26 +1210,25 @@ Format the email with proper greeting and sign-off.`;
   };
 
   // Comprehensive resume upload endpoint supporting multiple file types
-  app.post("/api/resume/upload", requireAuth, (req, res, next) => {
-    console.log('[RESUME-UPLOAD] Starting upload middleware...');
-    upload.any()(req, res, (err) => {
-      if (err) {
-        console.error('[RESUME-UPLOAD] Upload middleware error:', err);
-        return handleUploadError(err, req, res, next);
-      }
-      console.log('[RESUME-UPLOAD] Upload middleware completed successfully');
-      next();
-    });
-  }, async (req, res) => {
-    console.log(`[RESUME-UPLOAD] Received request - Files: ${req.files?.length || 0}, Body keys: ${Object.keys(req.body || {})}`);
-    console.log(`[RESUME-UPLOAD] Files:`, req.files);
+  app.post("/api/resume/upload", requireAuth, upload.single('resume'), async (req, res) => {
+    console.log('[RESUME-UPLOAD] Endpoint reached!');
+    console.log(`[RESUME-UPLOAD] User ID: ${req.user?.id}`);
+    console.log(`[RESUME-UPLOAD] File received:`, req.file ? 'Yes' : 'No');
+    if (req.file) {
+      console.log(`[RESUME-UPLOAD] File details:`, {
+        fieldname: req.file.fieldname,
+        originalname: req.file.originalname,
+        mimetype: req.file.mimetype,
+        size: req.file.size
+      });
+    }
     try {
       let resumeText = '';
       let fileData: string | undefined;
       let fileName: string | undefined;
       let mimeType: string | undefined;
       
-      const uploadedFile = req.files?.[0] || req.file;
+      const uploadedFile = req.file;
       if (uploadedFile) {
         // Handle file upload (PDF, TXT, DOCX, Images, etc.)
         fileName = uploadedFile.originalname;
@@ -1350,7 +1349,7 @@ Format the email with proper greeting and sign-off.`;
   });
   
   // Alternative endpoint for backward compatibility using same configuration
-  app.post("/api/upload-resume", requireAuth, upload.any(), async (req, res) => {
+  app.post("/api/upload-resume", requireAuth, upload.single('resume'), async (req, res) => {
     // Use the same logic as main upload endpoint
     try {
       let resumeText = '';
@@ -1358,7 +1357,7 @@ Format the email with proper greeting and sign-off.`;
       let fileName: string | undefined;
       let mimeType: string | undefined;
       
-      const uploadedFile = req.files?.[0] || req.file;
+      const uploadedFile = req.file;
       if (uploadedFile) {
         fileName = uploadedFile.originalname;
         mimeType = uploadedFile.mimetype;
