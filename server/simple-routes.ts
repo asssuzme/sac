@@ -1446,6 +1446,32 @@ Format the email with proper greeting and sign-off.`;
     res.json(applications);
   });
   
+  // Get user's resume text endpoint
+  app.get("/api/user/resume", requireAuth, async (req, res) => {
+    try {
+      const resumeData = await storage.getUserResume(req.user!.id);
+      
+      if (!resumeData?.resumeText) {
+        return res.status(404).json({ 
+          error: 'No resume found',
+          message: 'Please upload your resume first'
+        });
+      }
+      
+      res.json({ 
+        resumeText: resumeData.resumeText,
+        fileName: resumeData.resumeFileName,
+        uploadedAt: resumeData.resumeUploadedAt
+      });
+    } catch (error) {
+      console.error('Error fetching user resume:', error);
+      res.status(500).json({ 
+        error: 'Failed to fetch resume',
+        message: 'An error occurred while retrieving your resume'
+      });
+    }
+  });
+
   // Debug endpoint to check resume data
   app.get("/api/debug/resume", requireAuth, async (req, res) => {
     const resumeData = await storage.getUserResume(req.user!.id);

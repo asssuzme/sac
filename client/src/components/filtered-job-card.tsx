@@ -75,12 +75,24 @@ export function FilteredJobCard({ job, resumeText }: FilteredJobCardProps) {
         about: ""
       };
 
+      // Ensure we have all required fields
+      if (!resumeText) {
+        console.error('No resume text available');
+        setApplyStep('idle');
+        setShowLoadingModal(false);
+        alert('Please upload your resume first before applying to jobs.');
+        setIsGeneratingEmail(false);
+        return;
+      }
+
       const requestBody = {
         companyName: job.companyName, // Backend expects companyName as string
         jobDescription: job.requirement || `${job.title} position at ${job.companyName}`,
-        jobTitle: job.title,
+        jobTitle: job.title, // Make sure jobTitle is included
         resumeText: resumeText
       };
+      
+      console.log('Sending email generation request:', requestBody);
 
       const data = await apiRequest('/api/generate-email', {
         method: 'POST',
