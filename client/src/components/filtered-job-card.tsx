@@ -282,545 +282,355 @@ export function FilteredJobCard({ job, resumeText }: FilteredJobCardProps) {
     <motion.div
       initial={{ opacity: 0, y: 20 }}
       animate={{ opacity: 1, y: 0 }}
-      whileHover={{ y: -2 }}
-      className="glass-card p-4 md:p-6 hover:shadow-xl transition-all duration-300"
+      whileHover={{ y: -2, scale: 1.01 }}
+      className="bg-white/80 backdrop-blur-sm border border-gray-200/50 rounded-2xl shadow-lg hover:shadow-xl transition-all duration-300 overflow-hidden"
     >
-      <div className="flex flex-col md:flex-row md:items-start md:justify-between gap-4 mb-4">
-        <div className="flex items-start gap-3 md:gap-4 min-w-0">
-          {job.companyLogo ? (
-            <img 
-              src={job.companyLogo} 
-              alt={`${job.companyName} logo`} 
-              className="w-12 h-12 md:w-14 md:h-14 rounded-xl object-cover ring-2 ring-primary/10 flex-shrink-0" 
-            />
-          ) : (
-            <div className="w-12 h-12 md:w-14 md:h-14 rounded-xl bg-gradient-to-br from-primary/20 to-accent/20 flex items-center justify-center flex-shrink-0">
-              <Building className="h-6 w-6 md:h-7 md:w-7 text-primary" />
-            </div>
-          )}
-          <div className="flex-1 min-w-0">
-            <h3 
-              className="text-base md:text-lg font-semibold hover:text-primary transition-colors cursor-pointer mb-2 flex items-start gap-2"
-              onClick={handleViewJob}
-            >
-              <span className="line-clamp-2">{job.title}</span>
-              <ExternalLink className="h-4 w-4 opacity-0 group-hover:opacity-100 transition-opacity flex-shrink-0 hidden md:block" />
-            </h3>
-            {/* Primary job info */}
-            <div className="flex flex-wrap items-center gap-2 md:gap-4 text-xs md:text-sm text-muted-foreground mb-3">
-              <span 
-                className="font-medium hover:text-primary cursor-pointer transition-colors flex items-center gap-1"
-                onClick={handleViewCompany}
-              >
-                <Building className="h-3 w-3 flex-shrink-0" />
-                <span className="truncate">{job.companyName}</span>
-              </span>
-              <span className="flex items-center gap-1">
-                <MapPin className="h-3 w-3 flex-shrink-0" />
-                <span className="truncate">{job.location}</span>
-              </span>
-              {job.postedDate && (
-                <span className="flex items-center gap-1">
-                  <Clock className="h-3 w-3 flex-shrink-0" />
-                  <span className="whitespace-nowrap">{getRelativeTime(job.postedDate)}</span>
-                </span>
-              )}
-            </div>
-            
-            {/* Additional job details */}
-            <div className="flex flex-wrap items-center gap-2 md:gap-4 text-xs text-muted-foreground mb-4">
-              {job.workType && (
-                <Badge variant="secondary" className="text-xs">
-                  <Briefcase className="h-3 w-3 mr-1" />
-                  {job.workType}
-                </Badge>
-              )}
-              {job.experienceLevel && (
-                <Badge variant="outline" className="text-xs">
-                  <GraduationCap className="h-3 w-3 mr-1" />
-                  {job.experienceLevel}
-                </Badge>
-              )}
-              {(job.salary || job.salaryInfo) && (
-                <Badge variant="outline" className="text-xs text-green-600 border-green-200">
-                  <DollarSign className="h-3 w-3 mr-1" />
-                  {job.salary || job.salaryInfo}
-                </Badge>
-              )}
-            </div>
+      {/* Header Section */}
+      <div className="p-6">
+        <div className="flex items-start gap-4">
+          {/* Company Logo */}
+          <div className="flex-shrink-0">
+            {job.companyLogo ? (
+              <img 
+                src={job.companyLogo} 
+                alt={`${job.companyName} logo`} 
+                className="w-16 h-16 rounded-xl object-cover shadow-md border border-gray-200" 
+              />
+            ) : (
+              <div className="w-16 h-16 rounded-xl bg-gradient-to-br from-blue-500 to-purple-600 flex items-center justify-center shadow-md">
+                <Building className="h-8 w-8 text-white" />
+              </div>
+            )}
           </div>
-        </div>
-        <div className="flex items-center gap-2 justify-end md:justify-start md:flex-shrink-0">
-          {job.canApply ? (
-            <Badge className="bg-primary/10 text-primary border-primary/20 font-semibold text-xs md:text-sm whitespace-nowrap">
-              <CheckCircle className="h-3 w-3 mr-1 flex-shrink-0" />
-              <span className="hidden sm:inline">Can Apply</span>
-              <span className="sm:hidden">Apply</span>
-            </Badge>
-          ) : (
-            <Badge className="bg-muted text-muted-foreground border-muted font-semibold text-xs md:text-sm whitespace-nowrap">
-              <XCircle className="h-3 w-3 mr-1 flex-shrink-0" />
-              <span className="hidden sm:inline">Cannot Apply</span>
-              <span className="sm:hidden">No</span>
-            </Badge>
-          )}
-          <div className="flex items-center gap-2">
-            {job.canApply && (
-              <Button 
-                size="sm" 
-                className="tech-btn text-xs md:text-sm"
-                onClick={handleApplyClick}
-                disabled={applyStep !== 'idle'}
-              >
-                {applyStep === 'idle' && (
-                  <>
-                    <Send className="h-3 w-3 mr-1" />
-                    Apply
-                  </>
+          
+          {/* Job Info */}
+          <div className="flex-1 min-w-0">
+            <div className="flex items-start justify-between mb-3">
+              <div className="flex-1">
+                <h3 
+                  className="text-xl font-semibold text-gray-900 hover:text-blue-600 transition-colors cursor-pointer mb-2 leading-tight"
+                  onClick={handleViewJob}
+                >
+                  {job.title}
+                </h3>
+                <div className="flex items-center gap-4 text-sm text-gray-600 mb-3">
+                  <span 
+                    className="font-medium hover:text-blue-600 cursor-pointer transition-colors flex items-center gap-1"
+                    onClick={handleViewCompany}
+                  >
+                    <Building className="h-4 w-4" />
+                    {job.companyName}
+                  </span>
+                  <span className="flex items-center gap-1">
+                    <MapPin className="h-4 w-4" />
+                    {job.location}
+                  </span>
+                  {job.postedDate && (
+                    <span className="flex items-center gap-1">
+                      <Clock className="h-4 w-4" />
+                      {getRelativeTime(job.postedDate)}
+                    </span>
+                  )}
+                </div>
+                
+                {/* Job Details Badges */}
+                <div className="flex flex-wrap items-center gap-2">
+                  {job.workType && (
+                    <span className="inline-flex items-center gap-1 px-2 py-1 rounded-md bg-gray-100 text-gray-700 text-sm font-medium">
+                      <Briefcase className="h-3 w-3" />
+                      {job.workType}
+                    </span>
+                  )}
+                  {job.experienceLevel && (
+                    <span className="inline-flex items-center gap-1 px-2 py-1 rounded-md bg-blue-50 text-blue-700 text-sm font-medium">
+                      <GraduationCap className="h-3 w-3" />
+                      {job.experienceLevel}
+                    </span>
+                  )}
+                  {(job.salary || job.salaryInfo) && (
+                    <span className="inline-flex items-center gap-1 px-2 py-1 rounded-md bg-green-50 text-green-700 text-sm font-medium">
+                      <DollarSign className="h-3 w-3" />
+                      {job.salary || job.salaryInfo}
+                    </span>
+                  )}
+                </div>
+              </div>
+              
+              {/* Action Buttons */}
+              <div className="flex items-center gap-3 flex-shrink-0">
+                {job.canApply ? (
+                  <span className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-green-50 text-green-700 border border-green-200 text-sm font-medium">
+                    <CheckCircle className="h-4 w-4" />
+                    Can Apply
+                  </span>
+                ) : (
+                  <span className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-gray-50 text-gray-500 border border-gray-200 text-sm">
+                    <XCircle className="h-4 w-4" />
+                    Cannot Apply
+                  </span>
                 )}
-                {applyStep === 'checking-gmail' && (
-                  <>
-                    <Loader2 className="h-3 w-3 mr-1 animate-spin" />
-                    Checking...
-                  </>
+                
+                {job.canApply && (
+                  <Button 
+                    className="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg shadow-sm transition-all duration-200 font-medium"
+                    onClick={handleApplyClick}
+                    disabled={applyStep !== 'idle'}
+                  >
+                    {applyStep === 'idle' && (
+                      <>
+                        <Send className="h-4 w-4 mr-2" />
+                        Apply
+                      </>
+                    )}
+                    {applyStep === 'checking-gmail' && (
+                      <>
+                        <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                        Checking...
+                      </>
+                    )}
+                    {applyStep === 'scraping-company' && (
+                      <>
+                        <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                        Loading...
+                      </>
+                    )}
+                    {applyStep === 'generating-email' && (
+                      <>
+                        <Sparkles className="h-4 w-4 mr-2 animate-pulse" />
+                        Generating...
+                      </>
+                    )}
+                    {applyStep === 'ready' && (
+                      <>
+                        <CheckCircle className="h-4 w-4 mr-2" />
+                        Ready
+                      </>
+                    )}
+                  </Button>
                 )}
-                {applyStep === 'scraping-company' && (
-                  <>
-                    <Loader2 className="h-3 w-3 mr-1 animate-spin" />
-                    Loading...
-                  </>
-                )}
-                {applyStep === 'generating-email' && (
-                  <>
-                    <Sparkles className="h-3 w-3 mr-1 animate-pulse" />
-                    Generating...
-                  </>
-                )}
-                {applyStep === 'ready' && (
-                  <>
-                    <CheckCircle className="h-3 w-3 mr-1" />
-                    Ready
-                  </>
-                )}
-              </Button>
-            )}
-            {job.applyUrl && (
-              <Button 
-                size="sm" 
-                variant="outline"
-                className="text-xs md:text-sm"
-                onClick={handleViewJob}
-              >
-                <Globe className="h-3 w-3 mr-1" />
-                LinkedIn
-              </Button>
-            )}
+                
+                <Button 
+                  variant="outline"
+                  className="border-gray-300 text-gray-700 hover:bg-gray-50 px-4 py-2 rounded-lg transition-all duration-200"
+                  onClick={handleViewJob}
+                >
+                  <Globe className="h-4 w-4 mr-2" />
+                  LinkedIn
+                </Button>
+              </div>
+            </div>
           </div>
         </div>
       </div>
       
       {/* Job Description */}
       {job.description && (
-        <div className="mb-4 p-3 bg-muted/30 rounded-lg border">
-          <h4 className="text-xs font-semibold text-muted-foreground mb-2 uppercase tracking-wide">Job Description</h4>
-          <p className="text-xs md:text-sm text-foreground line-clamp-3 leading-relaxed">
-            {job.description.length > 200 ? `${job.description.substring(0, 200)}...` : job.description}
-          </p>
-          {job.description.length > 200 && (
-            <Button 
-              variant="ghost" 
-              size="sm" 
-              className="text-xs text-primary hover:text-primary/80 p-0 h-auto mt-2"
-              onClick={() => {/* TODO: Expand description */}}
-            >
-              Read more →
-            </Button>
-          )}
+        <div className="px-6 pb-4">
+          <div className="border-t border-gray-100 pt-4">
+            <h4 className="text-sm font-semibold text-gray-700 mb-3 uppercase tracking-wide">Job Description</h4>
+            <p className="text-gray-600 leading-relaxed text-sm">
+              {job.description.length > 300 ? `${job.description.substring(0, 300)}...` : job.description}
+            </p>
+            {job.description.length > 300 && (
+              <button 
+                className="text-blue-600 hover:text-blue-700 text-sm font-medium mt-2 transition-colors"
+                onClick={() => {/* TODO: Expand description */}}
+              >
+                Read more →
+              </button>
+            )}
+          </div>
         </div>
       )}
       
       {job.requirement && (
-        <div className="mb-4 p-3 bg-blue-50 rounded-lg border border-blue-100">
-          <h4 className="text-xs font-semibold text-blue-700 mb-2 uppercase tracking-wide">Requirements</h4>
-          <p className="text-xs md:text-sm text-blue-800 line-clamp-2">
-            {job.requirement}
-          </p>
+        <div className="px-6 pb-4">
+          <div className="bg-blue-50 rounded-lg p-4 border border-blue-100">
+            <h4 className="text-sm font-semibold text-blue-700 mb-2 uppercase tracking-wide">Requirements</h4>
+            <p className="text-blue-800 text-sm leading-relaxed">
+              {job.requirement}
+            </p>
+          </div>
         </div>
       )}
       
       {job.jobPosterName && (
-        <div className="mb-4 p-3 md:p-4 bg-primary/5 rounded-lg border border-primary/10">
-          <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2 mb-2">
-            <div className="flex items-center space-x-2 min-w-0">
-              {isRecruiter ? (
-                <Users className="h-4 w-4 text-blue-600 flex-shrink-0" />
-              ) : (
-                <User className="h-4 w-4 text-muted-foreground flex-shrink-0" />
-              )}
-              <span className="text-xs md:text-sm font-medium whitespace-nowrap">
-                {isRecruiter ? 'External Recruiter:' : 'Job Poster:'}
-              </span>
-              <div className="flex items-center gap-2">
-                <span 
-                  className="text-xs md:text-sm text-primary hover:underline cursor-pointer transition-colors truncate"
+        <div className="px-6 pb-4">
+          <div className="border-t border-gray-100 pt-4">
+            <div className="flex items-center justify-between mb-3">
+              <div className="flex items-center gap-3">
+                <div className="w-10 h-10 rounded-full bg-gray-100 flex items-center justify-center">
+                  {isRecruiter ? (
+                    <Users className="h-5 w-5 text-blue-600" />
+                  ) : (
+                    <User className="h-5 w-5 text-gray-600" />
+                  )}
+                </div>
+                <div>
+                  <p className="text-sm font-medium text-gray-600 mb-1">
+                    Job Poster
+                  </p>
+                  <div className="flex items-center gap-2">
+                    <span 
+                      className="text-sm font-semibold text-gray-900 hover:text-blue-600 cursor-pointer transition-colors"
+                      onClick={handleViewPoster}
+                    >
+                      {job.jobPosterName}
+                    </span>
+                  </div>
+                </div>
+              </div>
+              {job.jobPosterLinkedinUrl && (
+                <Button 
+                  variant="ghost" 
+                  size="sm"
                   onClick={handleViewPoster}
+                  className="text-gray-400 hover:text-gray-600 p-2"
                 >
-                  {job.jobPosterName}
-                </span>
-                {isRecruiter && (
-                  <Badge 
-                    variant="secondary" 
-                    className="bg-blue-50 text-blue-700 border-blue-200 text-xs flex-shrink-0"
-                  >
-                    <Shield className="h-3 w-3 mr-1" />
-                    Recruiter
-                  </Badge>
-                )}
-              </div>
+                  <ExternalLink className="h-4 w-4" />
+                </Button>
+              )}
             </div>
-            {job.jobPosterLinkedinUrl && (
-              <Button 
-                variant="ghost" 
-                size="sm"
-                onClick={handleViewPoster}
-                className="text-primary hover:text-primary/80"
-              >
-                <ExternalLink className="h-3 w-3" />
-              </Button>
+            
+            {/* Job Poster Title */}
+            {job.jobPosterTitle && (
+              <div className="mb-3">
+                <p className="text-sm text-gray-600">
+                  <Briefcase className="h-4 w-4 inline mr-2" />
+                  {job.jobPosterTitle}
+                </p>
+              </div>
             )}
-          </div>
-          
-          {/* Recruiter Context */}
-          {isRecruiter && recruiterCompany && (
-            <div className="mb-2 p-2 bg-blue-50 rounded-md border border-blue-100">
-              <p className="text-xs text-blue-700">
-                <Building className="h-3 w-3 inline mr-1" />
-                <strong>Recruiting for:</strong> {recruiterCompany}
-                <span className="ml-2 text-blue-600">• External recruitment agency</span>
-              </p>
-            </div>
-          )}
-          
-          {/* Job Poster Title */}
-          {job.jobPosterTitle && (
-            <div className="mb-2">
-              <p className="text-xs text-muted-foreground">
-                <Briefcase className="h-3 w-3 inline mr-1" />
-                {job.jobPosterTitle}
-              </p>
-            </div>
-          )}
-          {job.jobPosterEmail && (
-            <div className="space-y-2 pt-3 border-t border-border bg-primary/5 -mx-3 -mb-3 px-3 pb-3 rounded-b-lg">
-              <div className="flex items-center gap-2 mb-2">
-                <div className="flex items-center justify-center w-8 h-8 rounded-full bg-primary/10">
-                  <Mail className="h-4 w-4 text-primary" />
+            
+            {job.jobPosterEmail && (
+              <div className="bg-blue-50 rounded-lg p-4 border border-blue-100">
+                <div className="flex items-center gap-3 mb-3">
+                  <div className="w-8 h-8 rounded-full bg-blue-600 flex items-center justify-center">
+                    <Mail className="h-4 w-4 text-white" />
+                  </div>
+                  <div>
+                    <p className="text-sm font-semibold text-blue-900 uppercase tracking-wide">Direct Contact Available</p>
+                    <p className="text-sm text-blue-700">Apply directly to the hiring manager</p>
+                  </div>
                 </div>
-                <div className="flex-1">
-                  <p className="text-xs font-semibold text-primary uppercase tracking-wide">Direct Contact Available</p>
-                  <p className="text-xs text-muted-foreground">Apply directly to the hiring manager</p>
+                <div className="bg-white rounded-lg p-3 border border-blue-200">
+                  <div className="flex items-center justify-between">
+                    <div>
+                      <span className="text-sm font-medium text-gray-700">Email:</span>
+                      <a 
+                        href={`mailto:${job.jobPosterEmail}`}
+                        className="ml-2 text-sm text-blue-600 hover:text-blue-700 transition-colors font-mono"
+                      >
+                        {job.jobPosterEmail}
+                      </a>
+                    </div>
+                    {job.emailVerificationStatus && (
+                      <span 
+                        className={`inline-flex items-center px-2 py-1 rounded-full text-xs font-medium ${
+                          job.emailVerificationStatus === 'valid' 
+                            ? 'bg-green-50 text-green-700 border border-green-200' 
+                            : job.emailVerificationStatus === 'catch-all' 
+                            ? 'bg-yellow-50 text-yellow-700 border border-yellow-200'
+                            : job.emailVerificationStatus === 'error'
+                            ? 'bg-red-50 text-red-700 border border-red-200'
+                            : 'bg-gray-50 text-gray-600 border border-gray-200'
+                        }`}
+                      >
+                        {job.emailVerificationStatus}
+                      </span>
+                    )}
+                  </div>
                 </div>
-              </div>
-              <div className="flex flex-col sm:flex-row sm:items-center gap-2 bg-background rounded-md p-2 border">
-                <div className="flex items-center space-x-2">
-                  <span className="text-xs md:text-sm font-medium">Email:</span>
-                </div>
-                <a 
-                  href={`mailto:${job.jobPosterEmail}`}
-                  className="text-xs md:text-sm text-primary hover:underline transition-colors break-all font-mono"
-                >
-                  {job.jobPosterEmail}
-                </a>
-                {job.emailVerificationStatus && (
-                  <Badge 
-                    variant="secondary" 
-                    className={`text-xs self-start sm:self-auto ${
-                      job.emailVerificationStatus === 'valid' 
-                        ? 'bg-primary/10 text-primary' 
-                        : job.emailVerificationStatus === 'catch-all' 
-                        ? 'bg-yellow-500/10 text-yellow-600'
-                        : job.emailVerificationStatus === 'error'
-                        ? 'bg-destructive/10 text-destructive'
-                        : 'bg-muted text-muted-foreground'
-                    }`}
-                  >
-                    {job.emailVerificationStatus}
-                  </Badge>
-                )}
-              </div>
-              {job.emailVerificationStatus && (
-                <div className="flex items-center space-x-2">
-                  {job.emailVerificationStatus === 'valid' && (
+                {job.emailVerificationStatus && job.emailVerificationStatus === 'valid' && (
+                  <div className="mt-3">
                     <Button 
-                      size="sm" 
-                      className="tech-btn"
+                      className="w-full bg-blue-600 hover:bg-blue-700 text-white py-2 rounded-lg font-medium transition-all duration-200"
                       onClick={handleApplyClick}
                       disabled={applyStep !== 'idle'}
                     >
                       {applyStep === 'idle' && (
                         <>
-                          <CheckCircle className="h-3 w-3 mr-1" />
-                          Apply
+                          <Send className="h-4 w-4 mr-2" />
+                          Apply Now
                         </>
                       )}
                       {applyStep === 'checking-gmail' && (
                         <>
-                          <Loader2 className="h-3 w-3 mr-1 animate-spin" />
-                          Checking...
+                          <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                          Checking Gmail...
                         </>
                       )}
                       {applyStep === 'scraping-company' && (
                         <>
-                          <Loader2 className="h-3 w-3 mr-1 animate-spin" />
-                          Loading...
+                          <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                          Researching company...
                         </>
                       )}
                       {applyStep === 'generating-email' && (
                         <>
-                          <Sparkles className="h-3 w-3 mr-1 animate-pulse" />
-                          Generating...
+                          <Sparkles className="h-4 w-4 mr-2 animate-pulse" />
+                          Generating email...
                         </>
                       )}
                       {applyStep === 'ready' && (
                         <>
-                          <CheckCircle className="h-3 w-3 mr-1" />
-                          Ready
+                          <CheckCircle className="h-4 w-4 mr-2" />
+                          Ready to send
                         </>
                       )}
                     </Button>
-                  )}
-                  {job.emailVerificationStatus === 'catch-all' && (
-                    <Button 
-                      size="sm" 
-                      variant="outline"
-                      className="border-yellow-600 text-yellow-600 hover:bg-yellow-500/10"
-                      onClick={handleApplyClick}
-                      disabled={applyStep !== 'idle'}
-                    >
-                      {applyStep === 'idle' && (
-                        <>
-                          <Mail className="h-3 w-3 mr-1" />
-                          Risky Apply
-                        </>
-                      )}
-                      {applyStep !== 'idle' && (
-                        <>
-                          <Loader2 className="h-3 w-3 mr-1 animate-spin" />
-                          Processing...
-                        </>
-                      )}
-                    </Button>
-                  )}
-                  {job.emailVerificationStatus === 'error' && (
-                    <Button 
-                      size="sm" 
-                      variant="outline"
-                      className="border-muted-foreground text-muted-foreground hover:bg-muted"
-                      onClick={handleApplyClick}
-                      disabled={applyStep !== 'idle'}
-                    >
-                      {applyStep === 'idle' && (
-                        <>
-                          <Mail className="h-3 w-3 mr-1" />
-                          Generate Email
-                        </>
-                      )}
-                      {applyStep !== 'idle' && (
-                        <>
-                          <Loader2 className="h-3 w-3 mr-1 animate-spin" />
-                          Processing...
-                        </>
-                      )}
-                    </Button>
-                  )}
-                </div>
-              )}
-            </div>
-          )}
-        </div>
-      )}
-      
-      <div className="flex items-center justify-between pt-4 border-t border-border">
-        <div className="flex items-center space-x-3 text-sm">
-          <Button 
-            variant="outline" 
-            size="sm"
-            onClick={handleViewCompany}
-            className="hover:bg-secondary transition-all duration-300"
-          >
-            <Briefcase className="h-3 w-3 mr-1" />
-            Company
-          </Button>
-          <Button 
-            variant="outline" 
-            size="sm"
-            onClick={handleViewCompanyLinkedIn}
-            className="text-primary hover:bg-primary/10 transition-all duration-300"
-          >
-            LinkedIn
-          </Button>
-        </div>
-        <Button 
-          onClick={handleViewJob}
-          size="sm"
-          className="tech-btn"
-        >
-          <ExternalLink className="h-4 w-4 mr-1" />
-          View Job
-        </Button>
-      </div>
-      
-      {/* Company Profile Modal */}
-      <CompanyProfileModal 
-        isOpen={showCompanyModal}
-        onClose={() => setShowCompanyModal(false)}
-        companyProfile={companyProfile}
-        isLoading={companyMutation.isPending}
-        jobEmail={job.jobPosterEmail}
-        onProceedToApply={handleProceedToApply}
-        generatedEmail={generatedEmail}
-        isGeneratingEmail={isGeneratingEmail}
-      />
-      
-      {/* Gmail Authorization Prompt */}
-      {showGmailAuth && (
-        <div className="fixed inset-0 bg-background/80 backdrop-blur-sm z-50 flex items-center justify-center">
-          <div className="bg-card p-6 rounded-lg shadow-lg max-w-md w-full mx-4 border">
-            <div className="flex items-center gap-3 mb-4">
-              <div className="p-3 bg-blue-100 dark:bg-blue-900 rounded-lg">
-                <Mail className="h-6 w-6 text-blue-600 dark:text-blue-400" />
+                  </div>
+                )}
               </div>
-              <h3 className="text-lg font-semibold">Enable Gmail Sending</h3>
-            </div>
-            
-            <p className="text-sm text-muted-foreground mb-4">
-              To send job applications directly, we need permission to send emails on your behalf. 
-              You can use any Gmail account for sending.
-            </p>
-            
-            <div className="bg-muted/50 p-3 rounded-md mb-4">
-              <p className="text-xs text-muted-foreground">
-                <strong>Privacy:</strong> We only request email sending permission. 
-                We cannot read your emails or access personal data.
-              </p>
-            </div>
-            
-            <div className="flex gap-2">
-              <Button
-                variant="outline"
-                onClick={() => setShowGmailAuth(false)}
-                className="flex-1"
-              >
-                Cancel
-              </Button>
-              <Button
-                onClick={async () => {
-                  // Store job details in session storage for after auth
-                  sessionStorage.setItem('pendingApplyJob', JSON.stringify({
-                    job,
-                    resumeText,
-                    returnPath: window.location.pathname,
-                    returnSearch: window.location.search
-                  }));
-                  
-                  // Get the authorization URL from the backend
-                  try {
-                    const response = await fetch('/api/auth/gmail/authorize', {
-                      credentials: 'include'
-                    });
-                    const data = await response.json();
-                    if (data.authUrl) {
-                      // Open Gmail authorization in same window
-                      window.location.href = data.authUrl;
-                    }
-                  } catch (error) {
-                    console.error('Failed to get Gmail auth URL:', error);
-                    toast({
-                      title: "Authorization Error",
-                      description: "Failed to start Gmail authorization. Please try again.",
-                      variant: "destructive"
-                    });
-                  }
-                }}
-                className="flex-1 bg-blue-600 hover:bg-blue-700"
-              >
-                <Mail className="h-4 w-4 mr-2" />
-                Authorize Gmail
-              </Button>
-            </div>
+            )}
           </div>
         </div>
       )}
-
-      {/* Loading Modal for Email Generation */}
-      {showLoadingModal && (
-        <div className="fixed inset-0 bg-black/50 backdrop-blur-sm z-50 flex items-center justify-center">
-          <motion.div
-            initial={{ opacity: 0, scale: 0.95 }}
-            animate={{ opacity: 1, scale: 1 }}
-            className="bg-white dark:bg-gray-900 rounded-2xl p-8 max-w-md mx-4 shadow-2xl border border-gray-200 dark:border-gray-700"
+      
+      {/* Bottom Section */}
+      <div className="px-6 pb-6">
+        <div className="flex items-center justify-between pt-4 border-t border-gray-100">
+          <div className="flex items-center gap-3">
+            <Building className="h-4 w-4 text-gray-500" />
+            <span className="text-sm text-gray-600">Company</span>
+            {job.companyLinkedinUrl && (
+              <button 
+                className="text-sm text-blue-600 hover:text-blue-700 font-medium transition-colors"
+                onClick={handleViewCompanyLinkedIn}
+              >
+                LinkedIn
+              </button>
+            )}
+          </div>
+          <Button 
+            variant="outline"
+            size="sm"
+            className="border-gray-300 text-gray-700 hover:bg-gray-50 transition-all duration-200"
+            onClick={handleViewJob}
           >
-            <div className="text-center space-y-6">
-              <div className="flex justify-center">
-                <div className="relative">
-                  <motion.div
-                    animate={{ rotate: 360 }}
-                    transition={{ duration: 2, repeat: Infinity, ease: "linear" }}
-                    className="w-16 h-16 border-4 border-primary/20 border-t-primary rounded-full"
-                  />
-                  <motion.div
-                    animate={{ scale: [1, 1.2, 1] }}
-                    transition={{ duration: 1.5, repeat: Infinity }}
-                    className="absolute inset-0 flex items-center justify-center"
-                  >
-                    {applyStep === 'scraping-company' && <Building className="w-6 h-6 text-primary" />}
-                    {applyStep === 'generating-email' && <Sparkles className="w-6 h-6 text-primary" />}
-                    {applyStep === 'checking-gmail' && <Mail className="w-6 h-6 text-primary" />}
-                  </motion.div>
-                </div>
-              </div>
-              
-              <div className="space-y-2">
-                <h3 className="text-lg font-semibold text-gray-900 dark:text-gray-100">
-                  {applyStep === 'checking-gmail' && 'Verifying Gmail Access'}
-                  {applyStep === 'scraping-company' && 'Analyzing Company Profile'}
-                  {applyStep === 'generating-email' && 'Generating Personalized Email'}
-                </h3>
-                <p className="text-sm text-gray-600 dark:text-gray-400">
-                  {applyStep === 'checking-gmail' && 'Checking your Gmail authorization status...'}
-                  {applyStep === 'scraping-company' && 'Gathering company insights to personalize your application...'}
-                  {applyStep === 'generating-email' && 'Creating a compelling email tailored to this opportunity...'}
-                </p>
-              </div>
-              
-              <div className="flex justify-center space-x-1">
-                {[0, 1, 2].map((i) => (
-                  <motion.div
-                    key={i}
-                    animate={{ y: [0, -8, 0] }}
-                    transition={{ duration: 0.6, repeat: Infinity, delay: i * 0.2 }}
-                    className="w-2 h-2 bg-primary rounded-full"
-                  />
-                ))}
-              </div>
-            </div>
-          </motion.div>
+            View Job
+          </Button>
         </div>
-      )}
+      </div>
 
-      {/* Email Composer Modal */}
+      {/* Modals */}
+      <CompanyProfileModal 
+        isOpen={showCompanyModal}
+        onClose={() => setShowCompanyModal(false)}
+        company={companyProfile}
+        isLoading={companyMutation.isPending}
+        onProceed={handleProceedToApply}
+      />
+
       <EmailComposerModal 
         isOpen={showEmailComposer}
         onClose={() => setShowEmailComposer(false)}
-        recipientEmail={job.jobPosterEmail || ""}
-        jobTitle={job.title}
-        companyName={job.companyName}
-        jobUrl={job.link}
-        companyWebsite={job.companyWebsite}
+        job={job}
         generatedEmail={generatedEmail}
-        isGeneratingEmail={isGeneratingEmail}
-        onRegenerateEmail={handleRegenerateEmail}
-        showRegenerateButton={!!generatedEmail}
+        isGenerating={isGeneratingEmail}
+        onRegenerate={handleRegenerateEmail}
+        applyStep={applyStep}
+        resumeText={resumeText}
       />
     </motion.div>
   );
