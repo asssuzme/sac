@@ -4,7 +4,7 @@ import { useQuery } from "@tanstack/react-query";
 import { apiRequest, queryClient } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
 import { FilteredJobCard } from "@/components/filtered-job-card";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+// Removed Tabs - now showing only jobs with discoverable emails
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { 
   Activity, 
@@ -646,14 +646,17 @@ export default function Results() {
   }
 
   const enrichedJobs = scrapingResult.enrichedResults?.jobs || [];
-  const canApplyJobs = enrichedJobs.filter((job: any) => job.canApply);
-  const cannotApplyJobs = enrichedJobs.filter((job: any) => !job.canApply);
+  // ONLY show jobs where we found hiring manager emails (canApply: true)
+  const jobsWithEmails = enrichedJobs.filter((job: any) => job.canApply);
+  
+  // Hide jobs without discoverable emails - this is the core filtering logic
+  console.log(`FILTERING: Found ${jobsWithEmails.length} jobs with discoverable emails out of ${enrichedJobs.length} total jobs`);
   
   // Use real data from enrichedResults
   const enrichedResults = scrapingResult.enrichedResults as any;
   const totalJobsFound = enrichedResults?.fakeTotalJobs || 100;
   
-  const freeJobs = enrichedResults?.freeJobs || canApplyJobs.length;
+  const freeJobs = enrichedResults?.freeJobs || jobsWithEmails.length;
   const lockedJobs = enrichedResults?.lockedJobs || Math.max(0, totalJobsFound - freeJobs);
   
   // Use actual job counts for Pro Plan display
@@ -709,7 +712,7 @@ export default function Results() {
             >
               <div className="flex flex-col items-center text-center md:flex-row md:justify-between md:text-left">
                 <div>
-                  <p className="text-xl md:text-2xl font-bold text-accent">{canApplyJobs.length}</p>
+                  <p className="text-xl md:text-2xl font-bold text-accent">{jobsWithEmails.length}</p>
                   <p className="text-xs md:text-sm text-muted-foreground">With Contacts (Free Plan)</p>
                 </div>
                 <Users className="h-6 w-6 md:h-8 md:w-8 text-accent/20 hidden md:block" />
@@ -718,70 +721,54 @@ export default function Results() {
           </div>
         </div>
 
-        {/* Tabs for different job categories */}
-        <Tabs 
-          defaultValue="with-contacts" 
-          value={activeTab}
-          onValueChange={(value) => {
-            setActiveTab(value);
-            if (value === "without-contacts") {
-              setShowProPlanModal(true);
-            }
-          }}
-          className="space-y-4 md:space-y-6"
-        >
-          <TabsList className="glass-card p-1 w-full flex-col md:flex-row h-auto">
-            <TabsTrigger value="with-contacts" className="flex-1 flex items-center gap-1 md:gap-2 text-xs md:text-sm py-3 w-full md:w-auto">
-              <Sparkles className="h-3 w-3 md:h-4 md:w-4" />
-              <span className="hidden sm:inline">Free Plan</span>
-              <span className="sm:hidden">Free</span>
-              <span>({canApplyJobs.length})</span>
-            </TabsTrigger>
-            <TabsTrigger value="without-contacts" className="flex-1 flex items-center gap-1 md:gap-2 text-xs md:text-sm py-3 w-full md:w-auto">
-              <Filter className="h-3 w-3 md:h-4 md:w-4" />
-              <span className="hidden sm:inline">Pro Plan</span>
-              <span className="sm:hidden">Pro</span>
-              <span>({proPlanJobs.toLocaleString()})</span>
-            </TabsTrigger>
-          </TabsList>
+        {/* Only show jobs with discoverable contact emails */}
+        <div className="space-y-4 md:space-y-6">
+          <div className="text-center mb-6">
+            <h3 className="text-xl font-semibold mb-2">Jobs with Discoverable Contact Information</h3>
+            <p className="text-muted-foreground">Found {jobsWithEmails.length} jobs where we successfully extracted hiring manager emails</p>
+          </div>
 
-          {/* Jobs with contacts */}
-          <TabsContent value="with-contacts" className="space-y-4">
-            {/* Apply All Button - Locked for Pro Plan */}
-            {canApplyJobs.length > 0 && (
-              <motion.div
-                initial={{ opacity: 0, y: -10 }}
-                animate={{ opacity: 1, y: 0 }}
-                className="flex justify-center md:justify-end mb-4"
+          {/* Apply All Button */}
+          {jobsWithEmails.length > 0 && (
+            <motion.div
+              initial={{ opacity: 0, y: -10 }}
+              animate={{ opacity: 1, y: 0 }}
+              className="flex justify-center md:justify-end mb-4"
+            >
+              <Button
+                variant="default"
+                size="lg"
+                onClick={() => {
+                  toast({
+                    title: "Bulk Application",
+                    description: "This feature is coming soon!",
+                  });
+                }}
+                className="relative overflow-hidden bg-gradient-to-r from-primary to-accent hover:from-primary/90 hover:to-accent/90 text-white font-semibold shadow-lg hover:shadow-xl transition-all duration-300 px-4 md:px-6 py-2 md:py-3 text-sm md:text-base w-full md:w-auto max-w-xs md:max-w-none"
               >
-                <Button
-                  variant="default"
-                  size="lg"
-                  onClick={() => setShowProPlanModal(true)}
-                  className="relative overflow-hidden bg-gradient-to-r from-purple-600 via-pink-600 to-purple-600 hover:from-purple-700 hover:via-pink-700 hover:to-purple-700 text-white font-semibold shadow-lg hover:shadow-xl transition-all duration-300 px-4 md:px-6 py-2 md:py-3 text-sm md:text-base w-full md:w-auto max-w-xs md:max-w-none"
-                >
-                  <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/20 to-transparent -skew-x-12 -translate-x-full animate-shimmer" />
-                  <Lock className="h-4 w-4 md:h-5 md:w-5 mr-2 flex-shrink-0" />
-                  <span className="whitespace-nowrap">Apply to All ({canApplyJobs.length})</span>
-                  <Badge variant="secondary" className="ml-2 bg-yellow-500 text-black text-xs flex-shrink-0">PRO</Badge>
-                </Button>
-              </motion.div>
-            )}
-            
-            {canApplyJobs.length === 0 ? (
+                <Mail className="h-4 w-4 md:h-5 md:w-5 mr-2 flex-shrink-0" />
+                <span className="whitespace-nowrap">Apply to All ({jobsWithEmails.length})</span>
+              </Button>
+            </motion.div>
+          )}
+          
+          {jobsWithEmails.length === 0 ? (
               <motion.div
                 initial={{ opacity: 0 }}
                 animate={{ opacity: 1 }}
                 className="glass-card p-12 text-center"
               >
                 <Mail className="h-16 w-16 text-muted-foreground/20 mx-auto mb-4" />
-                <h3 className="text-lg font-medium mb-2">No Jobs with Contacts</h3>
-                <p className="text-muted-foreground">
-                  No contact information was found for the scraped jobs.
+                <h3 className="text-lg font-medium mb-2">No Contact Information Found</h3>
+                <p className="text-muted-foreground mb-4">
+                  We couldn't find hiring manager emails for any of the scraped jobs from this search.
+                </p>
+                <p className="text-sm text-muted-foreground">
+                  💡 Try searching for different job titles or locations to find jobs with discoverable contact information.
                 </p>
               </motion.div>
             ) : (
-              canApplyJobs.map((job: any, index: number) => (
+              jobsWithEmails.map((job: any, index: number) => (
                 <motion.div
                   key={job.jobUrl || index}
                   initial={{ opacity: 0, y: 20 }}
@@ -792,62 +779,10 @@ export default function Results() {
                 </motion.div>
               ))
             )}
-          </TabsContent>
-
-          {/* Jobs without contacts - Pro Plan */}
-          <TabsContent value="without-contacts" className="space-y-4 relative">
-            {/* Blur overlay */}
-            <div className="absolute inset-0 bg-background/50 backdrop-blur-md z-10 rounded-lg" />
-            
-            {cannotApplyJobs.length === 0 ? (
-              <motion.div
-                initial={{ opacity: 0 }}
-                animate={{ opacity: 1 }}
-                className="glass-card p-12 text-center"
-              >
-                <CheckCircle className="h-16 w-16 text-green-600/20 mx-auto mb-4" />
-                <h3 className="text-lg font-medium mb-2">All Jobs Have Contacts!</h3>
-                <p className="text-muted-foreground">
-                  Great news! Contact information was found for all jobs.
-                </p>
-              </motion.div>
-            ) : (
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                {cannotApplyJobs.map((job: any, index: number) => (
-                  <motion.div
-                    key={job.jobUrl || index}
-                    initial={{ opacity: 0, scale: 0.95 }}
-                    animate={{ opacity: 1, scale: 1 }}
-                    transition={{ delay: index * 0.05 }}
-                    className="glass-card p-4 hover:shadow-lg transition-shadow"
-                  >
-                    <h3 className="font-medium mb-2 line-clamp-1">
-                      {job.jobTitle || "Unknown Position"}
-                    </h3>
-                    <p className="text-sm text-muted-foreground mb-3">
-                      {job.companyName || "Unknown Company"} • {job.location || "Unknown Location"}
-                    </p>
-                    <div className="flex items-center justify-between">
-                      <Badge variant="secondary" className="text-xs">
-                        No contacts found
-                      </Badge>
-                      <a
-                        href={job.jobUrl}
-                        target="_blank"
-                        rel="noopener noreferrer"
-                        className="text-sm text-primary hover:underline"
-                      >
-                        View on LinkedIn →
-                      </a>
-                    </div>
-                  </motion.div>
-                ))}
-              </div>
-            )}
-          </TabsContent>
+          </div>
 
 
-        </Tabs>
+        </div>
       </motion.div>
 
       {/* Pro Plan Purchase Modal */}
