@@ -105,15 +105,19 @@ async function enrichJobsWithProfiles(jobs: any[]): Promise<any[]> {
         if (job.applyUrl && job.applyUrl.includes('linkedin.com')) {
           const profileData = await scrapeLinkedInProfile(job);
           
-          if (profileData && profileData.email) {
+          if (profileData) {
+            // Only mark as can apply if we have an email address
+            const hasEmail = profileData.email && profileData.email.trim() !== '';
+            
             return {
               ...job,
               jobPosterName: profileData.name || '',
-              jobPosterEmail: profileData.email,
-              contactEmail: profileData.email,  // Add contactEmail for compatibility
-              jobPosterLinkedin: profileData.profileUrl || '',
+              jobPosterEmail: hasEmail ? profileData.email : null,
+              contactEmail: hasEmail ? profileData.email : null,  // Add contactEmail for compatibility
+              jobPosterLinkedinUrl: profileData.profileUrl || '', // Fix field name inconsistency
+              jobPosterImageUrl: profileData.profilePicture || null, // Add profile picture URL
               jobPosterTitle: profileData.headline || '',
-              canApply: true
+              canApply: hasEmail // Only can apply if we have email
             };
           }
         }
@@ -209,19 +213,19 @@ async function scrapeLinkedInProfile(job: any): Promise<any> {
       const profile = items[0];
       console.log('Profile scraped successfully:', profile.name || profile.fullName);
       
-      // Check if the profile has contact information
-      if (profile.email || profile.contactInfo?.email) {
-        return {
-          name: profile.name || profile.fullName || job.jobPosterName || 'Hiring Manager',
-          email: profile.email || profile.contactInfo?.email,
-          profileUrl: job.jobPosterUrl,
-          headline: profile.headline || `Hiring for ${job.jobTitle}`,
-          company: profile.company || job.companyName,
-          phone: profile.phone || profile.contactInfo?.phone,
-        };
-      } else {
-        console.log('No email found in LinkedIn profile for:', profile.name || profile.fullName);
-      }
+      // Always extract profile information when available
+      const profileData = {
+        name: profile.name || profile.fullName || job.jobPosterName || 'Hiring Manager',
+        email: profile.email || profile.contactInfo?.email || null,
+        profileUrl: job.jobPosterUrl,
+        headline: profile.headline || `Hiring for ${job.jobTitle}`,
+        company: profile.company || job.companyName,
+        phone: profile.phone || profile.contactInfo?.phone || null,
+        profilePicture: profile.profilePicture || profile.avatar || profile.imageUrl || profile.photoUrl || profile.picture || null,
+      };
+      
+      console.log('Profile scraped:', profileData.name, profileData.email ? '(with email)' : '(no email)', profileData.profilePicture ? '(with photo)' : '(no photo)');
+      return profileData;
     }
     
     return null;

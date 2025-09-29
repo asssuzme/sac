@@ -302,13 +302,23 @@ export function FilteredJobCard({ job, resumeText }: FilteredJobCardProps) {
           {/* Company Logo */}
           <div className="flex-shrink-0">
             {job.companyLogo ? (
-              <img 
-                src={job.companyLogo} 
-                alt={`${job.companyName} logo`} 
-                className="w-16 h-16 rounded-xl object-cover shadow-md border border-gray-200" 
-              />
+              <div className="relative">
+                <img 
+                  src={job.companyLogo} 
+                  alt={`${job.companyName} logo`} 
+                  className="w-16 h-16 rounded-xl object-cover shadow-lg border-2 border-white ring-2 ring-gray-100" 
+                  onError={(e) => {
+                    // Fallback to gradient background if image fails to load
+                    e.currentTarget.style.display = 'none';
+                    e.currentTarget.nextElementSibling?.classList.remove('hidden');
+                  }}
+                />
+                <div className="hidden w-16 h-16 rounded-xl bg-gradient-to-br from-blue-500 to-purple-600 flex items-center justify-center shadow-lg">
+                  <Building className="h-8 w-8 text-white" />
+                </div>
+              </div>
             ) : (
-              <div className="w-16 h-16 rounded-xl bg-gradient-to-br from-blue-500 to-purple-600 flex items-center justify-center shadow-md">
+              <div className="w-16 h-16 rounded-xl bg-gradient-to-br from-blue-500 to-purple-600 flex items-center justify-center shadow-lg border-2 border-white ring-2 ring-gray-100">
                 <Building className="h-8 w-8 text-white" />
               </div>
             )}
@@ -470,11 +480,50 @@ export function FilteredJobCard({ job, resumeText }: FilteredJobCardProps) {
           <div className="border-t border-gray-100 pt-4">
             <div className="flex items-center justify-between mb-3">
               <div className="flex items-center gap-3">
-                <div className="w-10 h-10 rounded-full bg-gray-100 flex items-center justify-center">
-                  {isRecruiter ? (
-                    <Users className="h-5 w-5 text-blue-600" />
+                {/* Job Poster Profile Picture */}
+                <div className="relative">
+                  {job.jobPosterImageUrl ? (
+                    <div className="relative">
+                      <img 
+                        src={job.jobPosterImageUrl}
+                        alt={`${job.jobPosterName} profile picture`}
+                        className="w-12 h-12 rounded-full object-cover shadow-md border-2 border-white ring-2 ring-blue-100"
+                        onError={(e) => {
+                          // Fallback to gradient background if profile image fails to load
+                          e.currentTarget.style.display = 'none';
+                          e.currentTarget.nextElementSibling?.classList.remove('hidden');
+                        }}
+                      />
+                      <div className="hidden w-12 h-12 rounded-full bg-gradient-to-br from-blue-500 to-purple-600 flex items-center justify-center shadow-md border-2 border-white ring-2 ring-blue-100">
+                        {isRecruiter ? (
+                          <Users className="h-6 w-6 text-white" />
+                        ) : (
+                          <User className="h-6 w-6 text-white" />
+                        )}
+                      </div>
+                    </div>
+                  ) : job.jobPosterLinkedinUrl ? (
+                    <div className="w-12 h-12 rounded-full bg-gradient-to-br from-blue-500 to-purple-600 flex items-center justify-center shadow-md border-2 border-white ring-2 ring-blue-100">
+                      {isRecruiter ? (
+                        <Users className="h-6 w-6 text-white" />
+                      ) : (
+                        <User className="h-6 w-6 text-white" />
+                      )}
+                    </div>
                   ) : (
-                    <User className="h-5 w-5 text-gray-600" />
+                    <div className="w-12 h-12 rounded-full bg-gray-100 flex items-center justify-center border-2 border-white ring-2 ring-gray-200">
+                      {isRecruiter ? (
+                        <Users className="h-6 w-6 text-gray-600" />
+                      ) : (
+                        <User className="h-6 w-6 text-gray-600" />
+                      )}
+                    </div>
+                  )}
+                  {/* Online indicator for LinkedIn profiles */}
+                  {job.jobPosterLinkedinUrl && (
+                    <div className="absolute -bottom-0.5 -right-0.5 w-4 h-4 bg-blue-600 rounded-full border-2 border-white flex items-center justify-center">
+                      <div className="w-2 h-2 bg-white rounded-full"></div>
+                    </div>
                   )}
                 </div>
                 <div>
@@ -488,6 +537,12 @@ export function FilteredJobCard({ job, resumeText }: FilteredJobCardProps) {
                     >
                       {job.jobPosterName}
                     </span>
+                    {job.jobPosterLinkedinUrl && (
+                      <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-blue-50 text-blue-700 text-xs font-medium">
+                        <div className="w-2 h-2 bg-blue-600 rounded-full"></div>
+                        LinkedIn
+                      </span>
+                    )}
                   </div>
                 </div>
               </div>
@@ -496,7 +551,7 @@ export function FilteredJobCard({ job, resumeText }: FilteredJobCardProps) {
                   variant="ghost" 
                   size="sm"
                   onClick={handleViewPoster}
-                  className="text-gray-400 hover:text-gray-600 p-2"
+                  className="text-blue-500 hover:text-blue-700 hover:bg-blue-50 p-2 rounded-lg transition-all duration-200"
                 >
                   <ExternalLink className="h-4 w-4" />
                 </Button>
