@@ -28,9 +28,9 @@ export default function Settings() {
   const uploadResumeMutation = useMutation({
     mutationFn: async (file: File) => {
       const formData = new FormData();
-      formData.append('file', file);
+      formData.append('resume', file);
       
-      const endpoint = file.type === 'application/pdf' ? '/api/parse-pdf' : '/api/upload-resume';
+      const endpoint = '/api/resume/upload';
       const response = await fetch(endpoint, {
         method: 'POST',
         body: formData,

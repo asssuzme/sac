@@ -285,10 +285,10 @@ export function JobScraper({ onComplete }: JobScraperProps = {}) {
     if (!file) return;
 
     const formData = new FormData();
-    formData.append('file', file);
+    formData.append('resume', file);
 
     try {
-      const response = await fetch('/api/upload-resume', {
+      const response = await fetch('/api/resume/upload', {
         method: 'POST',
         body: formData,
         credentials: 'include'
