@@ -779,9 +779,6 @@ export default function Results() {
                 </motion.div>
               ))
             )}
-          </div>
-
-
         </div>
       </motion.div>
 
