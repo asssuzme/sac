@@ -35,8 +35,8 @@ export function registerGmailAuthRoutes(app: Express) {
       const authUrl = getGmailAuthUrl(user.id, req);
       console.log('Generated Gmail auth URL for user:', user.email);
       
-      // Return JSON with authUrl for AJAX requests
-      res.json({ authUrl });
+      // Redirect directly to Google OAuth instead of returning JSON
+      res.redirect(authUrl);
     } catch (error) {
       console.error('Gmail authorization error:', error);
       res.status(500).json({ 
