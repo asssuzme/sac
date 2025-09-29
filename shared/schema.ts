@@ -162,6 +162,7 @@ export const filteredJobDataSchema = z.object({
   companyLinkedinUrl: z.string(),
   jobPosterName: z.string().optional(),
   jobPosterLinkedinUrl: z.string().optional(),
+  jobPosterTitle: z.string().optional(), // LinkedIn job poster title/headline
   jobPosterEmail: z.string().optional(),
   emailVerificationStatus: z.enum(['valid', 'catch-all', 'error', 'unknown']).optional(),
   requirement: z.string().optional(),

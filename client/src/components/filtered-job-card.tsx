@@ -2,7 +2,7 @@ import { useState, useRef, useEffect } from "react";
 import { FilteredJobData } from "@shared/schema";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { MapPin, ExternalLink, User, Briefcase, DollarSign, Mail, CheckCircle, XCircle, Send, Loader2, Sparkles, Globe, Building, Clock } from "lucide-react";
+import { MapPin, ExternalLink, User, Briefcase, DollarSign, Mail, CheckCircle, XCircle, Send, Loader2, Sparkles, Globe, Building, Clock, Shield, Users } from "lucide-react";
 import { CompanyProfileModal } from "./company-profile-modal";
 import { EmailComposerModal } from "./email-composer-modal";
 import { useMutation, useQuery } from "@tanstack/react-query";
@@ -242,6 +242,42 @@ export function FilteredJobCard({ job, resumeText }: FilteredJobCardProps) {
     }
   };
 
+  // Extract company from recruiter title if available (define function first)
+  const getRecruiterCompany = () => {
+    if (!job.jobPosterTitle) return null;
+    // Handle both "@ Company" and "at Company" patterns
+    const atMatch = job.jobPosterTitle.match(/\s+at\s+([^|]+)/i);
+    const symbolMatch = job.jobPosterTitle.match(/@\s*([^|]+)/);
+    const match = atMatch || symbolMatch;
+    return match ? match[1].trim() : null;
+  };
+
+  // Detect EXTERNAL recruiters (not internal HR) based on title patterns and company context
+  const isExternalRecruiter = job.jobPosterTitle && (
+    job.jobPosterTitle.toLowerCase().includes('talent acquisition') ||
+    job.jobPosterTitle.toLowerCase().includes('recruiter') ||
+    job.jobPosterTitle.toLowerCase().includes('ta consultant') ||
+    job.jobPosterTitle.toLowerCase().includes('ta professional') ||
+    job.jobPosterTitle.toLowerCase().includes('talent scout') ||
+    job.jobPosterTitle.toLowerCase().includes('talent specialist') ||
+    job.jobPosterTitle.toLowerCase().includes('tech-recruitment') ||
+    job.jobPosterTitle.toLowerCase().includes('technical recruitment') ||
+    // Match TA Group/Team patterns
+    (job.jobPosterTitle.toLowerCase().includes('ta') && (
+      job.jobPosterTitle.toLowerCase().includes('group') ||
+      job.jobPosterTitle.toLowerCase().includes('team')
+    ))
+  );
+  
+  // Check if this is likely an external recruitment agency
+  const recruiterCompany = getRecruiterCompany();
+  const isRecruiter = isExternalRecruiter && (
+    // Has company context different from job company (external agency)
+    (recruiterCompany && recruiterCompany.toLowerCase() !== job.companyName.toLowerCase()) ||
+    // Or is clearly an external recruiter based on title alone
+    (job.jobPosterTitle && job.jobPosterTitle.toLowerCase().includes('recruitment'))
+  );
+
   return (
     <motion.div
       initial={{ opacity: 0, y: 20 }}
@@ -365,14 +401,31 @@ export function FilteredJobCard({ job, resumeText }: FilteredJobCardProps) {
         <div className="mb-4 p-3 md:p-4 bg-primary/5 rounded-lg border border-primary/10">
           <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2 mb-2">
             <div className="flex items-center space-x-2 min-w-0">
-              <User className="h-4 w-4 text-muted-foreground flex-shrink-0" />
-              <span className="text-xs md:text-sm font-medium whitespace-nowrap">Job Poster:</span>
-              <span 
-                className="text-xs md:text-sm text-primary hover:underline cursor-pointer transition-colors truncate"
-                onClick={handleViewPoster}
-              >
-                {job.jobPosterName}
+              {isRecruiter ? (
+                <Users className="h-4 w-4 text-blue-600 flex-shrink-0" />
+              ) : (
+                <User className="h-4 w-4 text-muted-foreground flex-shrink-0" />
+              )}
+              <span className="text-xs md:text-sm font-medium whitespace-nowrap">
+                {isRecruiter ? 'External Recruiter:' : 'Job Poster:'}
               </span>
+              <div className="flex items-center gap-2">
+                <span 
+                  className="text-xs md:text-sm text-primary hover:underline cursor-pointer transition-colors truncate"
+                  onClick={handleViewPoster}
+                >
+                  {job.jobPosterName}
+                </span>
+                {isRecruiter && (
+                  <Badge 
+                    variant="secondary" 
+                    className="bg-blue-50 text-blue-700 border-blue-200 text-xs flex-shrink-0"
+                  >
+                    <Shield className="h-3 w-3 mr-1" />
+                    Recruiter
+                  </Badge>
+                )}
+              </div>
             </div>
             {job.jobPosterLinkedinUrl && (
               <Button 
@@ -385,6 +438,27 @@ export function FilteredJobCard({ job, resumeText }: FilteredJobCardProps) {
               </Button>
             )}
           </div>
+          
+          {/* Recruiter Context */}
+          {isRecruiter && recruiterCompany && (
+            <div className="mb-2 p-2 bg-blue-50 rounded-md border border-blue-100">
+              <p className="text-xs text-blue-700">
+                <Building className="h-3 w-3 inline mr-1" />
+                <strong>Recruiting for:</strong> {recruiterCompany}
+                <span className="ml-2 text-blue-600">• External recruitment agency</span>
+              </p>
+            </div>
+          )}
+          
+          {/* Job Poster Title */}
+          {job.jobPosterTitle && (
+            <div className="mb-2">
+              <p className="text-xs text-muted-foreground">
+                <Briefcase className="h-3 w-3 inline mr-1" />
+                {job.jobPosterTitle}
+              </p>
+            </div>
+          )}
           {job.jobPosterEmail && (
             <div className="space-y-2 pt-2 border-t border-border">
               <div className="flex flex-col sm:flex-row sm:items-center gap-2">
