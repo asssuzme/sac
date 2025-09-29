@@ -76,11 +76,9 @@ export function FilteredJobCard({ job, resumeText }: FilteredJobCardProps) {
       };
 
       const requestBody = {
-        companyData: companyData || { name: job.companyName },
-        jobPosterData,
-        jobDescription: job.requirement || `${job.title} position at ${job.companyName}`,
+        companyName: job.companyName, // Backend expects companyName as string
+        jobDescription: job.requirement || job.description || `${job.title} position at ${job.companyName}`,
         jobTitle: job.title,
-        recipientEmail: job.jobPosterEmail || "",
         resumeText: resumeText
       };
 
