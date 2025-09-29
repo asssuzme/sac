@@ -749,7 +749,7 @@ export default function Landing() {
         <div className="absolute inset-0 bg-gradient-to-br from-blue-600/10 via-purple-600/5 to-transparent" />
         
         <div className="relative max-w-7xl mx-auto">
-          <div className="grid grid-cols-1 lg:grid-cols-[1fr_auto_1fr] gap-6 sm:gap-8 md:gap-12 items-center">
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 sm:gap-8 md:gap-12 items-center">
             <motion.div
               initial={{ opacity: 0, x: -30 }}
               animate={{ opacity: 1, x: 0 }}
@@ -807,60 +807,6 @@ export default function Landing() {
               </p>
             </motion.div>
             
-            {/* Floating Logo in Center */}
-            <motion.div
-              initial={{ opacity: 0, scale: 0.8 }}
-              animate={{ opacity: 1, scale: 1 }}
-              transition={{ duration: 0.8, delay: 0.1 }}
-              className="hidden lg:block"
-            >
-              <motion.div
-                className="relative w-32 h-32"
-                animate={{ 
-                  y: [0, -10, 0],
-                  rotate: [0, 2, -2, 0]
-                }}
-                transition={{ 
-                  duration: 6,
-                  repeat: Infinity,
-                  ease: "easeInOut"
-                }}
-              >
-                {/* Glowing Background */}
-                <motion.div
-                  className="absolute -inset-4 bg-gradient-to-r from-blue-500 to-purple-600 rounded-full blur-2xl"
-                  animate={{
-                    scale: [1, 1.2, 1],
-                    opacity: [0.3, 0.5, 0.3]
-                  }}
-                  transition={{
-                    duration: 4,
-                    repeat: Infinity,
-                    ease: "easeInOut"
-                  }}
-                />
-                
-                {/* Logo Placeholder */}
-                <motion.div
-                  className="relative w-full h-full flex items-center justify-center bg-gradient-to-br from-blue-600 to-blue-800 rounded-lg drop-shadow-2xl"
-                  whileHover={{ scale: 1.05 }}
-                  transition={{ type: "spring", stiffness: 300 }}
-                >
-                  <div className="text-white text-2xl font-bold">AI</div>
-                </motion.div>
-                
-                {/* Rotating Ring Effect */}
-                <motion.div
-                  className="absolute inset-0 border-2 border-transparent border-t-blue-400 border-r-purple-400 rounded-full"
-                  animate={{ rotate: 360 }}
-                  transition={{
-                    duration: 10,
-                    repeat: Infinity,
-                    ease: "linear"
-                  }}
-                />
-              </motion.div>
-            </motion.div>
             
             <motion.div
               initial={{ opacity: 0, x: 30 }}
