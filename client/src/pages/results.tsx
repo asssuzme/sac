@@ -651,7 +651,7 @@ export default function Results() {
   
   // Use real data from enrichedResults
   const enrichedResults = scrapingResult.enrichedResults as any;
-  const totalJobsFound = scrapingResult.totalJobsFound || enrichedResults?.fakeTotalJobs || 0;
+  const totalJobsFound = enrichedResults?.fakeTotalJobs || 100;
   
   const freeJobs = enrichedResults?.freeJobs || canApplyJobs.length;
   const lockedJobs = enrichedResults?.lockedJobs || Math.max(0, totalJobsFound - freeJobs);
@@ -694,7 +694,7 @@ export default function Results() {
             >
               <div className="flex flex-col items-center text-center md:flex-row md:justify-between md:text-left">
                 <div>
-                  <p className="text-xl md:text-2xl font-bold text-primary">{fakeTotalJobs.toLocaleString()}</p>
+                  <p className="text-xl md:text-2xl font-bold text-primary">{totalJobsFound.toLocaleString()}</p>
                   <p className="text-xs md:text-sm text-muted-foreground">Total Jobs</p>
                 </div>
                 <Briefcase className="h-6 w-6 md:h-8 md:w-8 text-primary/20 hidden md:block" />
@@ -741,7 +741,7 @@ export default function Results() {
               <Filter className="h-3 w-3 md:h-4 md:w-4" />
               <span className="hidden sm:inline">Pro Plan</span>
               <span className="sm:hidden">Pro</span>
-              <span>({fakeProPlanJobs.toLocaleString()})</span>
+              <span>({proPlanJobs.toLocaleString()})</span>
             </TabsTrigger>
           </TabsList>
 
