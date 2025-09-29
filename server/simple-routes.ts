@@ -1211,10 +1211,13 @@ Format the email with proper greeting and sign-off.`;
 
   // Comprehensive resume upload endpoint supporting multiple file types
   app.post("/api/resume/upload", requireAuth, (req, res, next) => {
+    console.log('[RESUME-UPLOAD] Starting upload middleware...');
     upload.any()(req, res, (err) => {
       if (err) {
+        console.error('[RESUME-UPLOAD] Upload middleware error:', err);
         return handleUploadError(err, req, res, next);
       }
+      console.log('[RESUME-UPLOAD] Upload middleware completed successfully');
       next();
     });
   }, async (req, res) => {
