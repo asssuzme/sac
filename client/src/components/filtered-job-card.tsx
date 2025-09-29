@@ -127,9 +127,20 @@ export function FilteredJobCard({ job, resumeText }: FilteredJobCardProps) {
       
       // Only show auth prompt if user truly hasn't authorized Gmail yet
       if (!status?.authorized && !status?.isConnected) {
-        // User needs Gmail authorization first
+        // User needs Gmail authorization first - redirect to Gmail auth
         setApplyStep('idle');
-        setShowGmailAuth(true);
+        
+        // Store job info for auto-apply after Gmail auth
+        sessionStorage.setItem('pendingApplyJob', JSON.stringify({
+          job: {
+            companyName: job.companyName,
+            title: job.title
+          }
+        }));
+        
+        // Redirect to Gmail authorization with return URL
+        const currentUrl = window.location.pathname + window.location.search;
+        window.location.href = `/api/auth/gmail/authorize?returnUrl=${encodeURIComponent(currentUrl)}&autoApply=true`;
         return;
       }
       
