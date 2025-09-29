@@ -900,9 +900,22 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
   // Email generation endpoint
   app.post("/api/generate-email", requireAuth, async (req, res) => {
+    console.log('Email generation request body:', JSON.stringify(req.body, null, 2));
     const { jobTitle, companyName, jobDescription, resumeText } = req.body;
     
+    console.log('Extracted fields:', { 
+      jobTitle: !!jobTitle, 
+      companyName: !!companyName, 
+      jobDescription: !!jobDescription, 
+      resumeText: !!resumeText 
+    });
+    
     if (!jobTitle || !companyName || !resumeText) {
+      console.log('Validation failed - missing fields:', { 
+        jobTitle: !jobTitle ? 'MISSING' : 'OK', 
+        companyName: !companyName ? 'MISSING' : 'OK', 
+        resumeText: !resumeText ? 'MISSING' : 'OK' 
+      });
       return res.status(400).json({ error: 'Missing required fields' });
     }
 
