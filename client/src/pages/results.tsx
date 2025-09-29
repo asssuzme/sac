@@ -262,27 +262,7 @@ export default function Results() {
     }
   };
 
-  // Sample job cards for loading animation
-  const sampleJobCards = [
-    {
-      id: 1,
-      title: "Senior Product Manager",
-      company: "Tech Corp",
-      location: "San Francisco, CA"
-    },
-    {
-      id: 2,
-      title: "Product Marketing Manager",
-      company: "StartupXYZ",
-      location: "New York, NY"
-    },
-    {
-      id: 3,
-      title: "VP of Product",
-      company: "Innovation Labs",
-      location: "Austin, TX"
-    }
-  ];
+  // Removed hardcoded sample job cards - using real data only
 
   if (!user) {
     return null;
@@ -592,39 +572,32 @@ export default function Results() {
               </div>
             </motion.div>
 
-            {/* Animated Job Card Previews */}
+            {/* Real-time Job Search Animation */}
             <div className="relative h-32 overflow-hidden">
-              <AnimatePresence>
-                {sampleJobCards.map((job, index) => (
-                  <motion.div
-                    key={`${job.id}-${Math.floor(Date.now() / 10000)}`}
-                    className="absolute w-72 glass-card p-4"
-                    initial={{ x: "100%", opacity: 0 }}
-                    animate={{ 
-                      x: [window.innerWidth, -300],
-                      opacity: [0, 1, 1, 0]
-                    }}
-                    transition={{
-                      duration: 10,
-                      delay: index * 3,
-                      repeat: Infinity,
-                      repeatDelay: 6,
-                      ease: "linear"
-                    }}
-                    style={{ top: `${index * 40}px` }}
-                  >
-                    <div className="flex items-center gap-3">
-                      <div className="p-2 rounded bg-primary/10">
-                        <Briefcase className="h-4 w-4 text-primary" />
-                      </div>
-                      <div>
-                        <p className="font-medium text-sm">{job.title}</p>
-                        <p className="text-xs text-muted-foreground">{job.company} • {job.location}</p>
-                      </div>
+              <motion.div
+                className="flex items-center justify-center h-full"
+                animate={{ 
+                  opacity: [0.6, 1, 0.6],
+                  scale: [0.95, 1, 0.95]
+                }}
+                transition={{
+                  duration: 2,
+                  repeat: Infinity,
+                  ease: "easeInOut"
+                }}
+              >
+                <div className="glass-card p-6">
+                  <div className="flex items-center gap-3">
+                    <div className="p-2 rounded bg-primary/10">
+                      <Search className="h-5 w-5 text-primary" />
                     </div>
-                  </motion.div>
-                ))}
-              </AnimatePresence>
+                    <div>
+                      <p className="font-medium">Finding LinkedIn Decision Makers...</p>
+                      <p className="text-xs text-muted-foreground">Extracting contact information</p>
+                    </div>
+                  </div>
+                </div>
+              </motion.div>
             </div>
 
             {/* Dynamic message */}
@@ -676,25 +649,15 @@ export default function Results() {
   const canApplyJobs = enrichedJobs.filter((job: any) => job.canApply);
   const cannotApplyJobs = enrichedJobs.filter((job: any) => !job.canApply);
   
-  // Use the stored fake data from enrichedResults
+  // Use real data from enrichedResults
   const enrichedResults = scrapingResult.enrichedResults as any;
-  let fakeTotalJobs = enrichedResults?.fakeTotalJobs;
-  
-  // For old searches without fakeTotalJobs, generate consistent number based on search ID
-  if (!fakeTotalJobs && requestId) {
-    let hash = 0;
-    for (let i = 0; i < requestId.length; i++) {
-      hash = ((hash << 5) - hash) + requestId.charCodeAt(i);
-      hash = hash & hash;
-    }
-    fakeTotalJobs = 500 + Math.abs(hash % 1501); // 500-2000
-  }
+  const totalJobsFound = scrapingResult.totalJobsFound || enrichedResults?.fakeTotalJobs || 0;
   
   const freeJobs = enrichedResults?.freeJobs || canApplyJobs.length;
-  const lockedJobs = enrichedResults?.lockedJobs || (fakeTotalJobs - freeJobs);
+  const lockedJobs = enrichedResults?.lockedJobs || Math.max(0, totalJobsFound - freeJobs);
   
-  // For consistency, use lockedJobs for Pro Plan display
-  const fakeProPlanJobs = lockedJobs;
+  // Use actual job counts for Pro Plan display
+  const proPlanJobs = lockedJobs;
 
   return (
     <DashboardLayout user={user} onLogout={() => window.location.href = "/api/auth/logout"} title="Job Results">
