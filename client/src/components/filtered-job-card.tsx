@@ -2,7 +2,7 @@ import { useState, useRef, useEffect } from "react";
 import { FilteredJobData } from "@shared/schema";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { MapPin, ExternalLink, User, Briefcase, DollarSign, Mail, CheckCircle, XCircle, Send, Loader2, Sparkles, Globe, Building, Clock, Shield, Users } from "lucide-react";
+import { MapPin, ExternalLink, User, Briefcase, DollarSign, Mail, CheckCircle, XCircle, Send, Loader2, Sparkles, Globe, Building, Clock, Shield, Users, GraduationCap } from "lucide-react";
 import { CompanyProfileModal } from "./company-profile-modal";
 import { EmailComposerModal } from "./email-composer-modal";
 import { useMutation, useQuery } from "@tanstack/react-query";
@@ -306,6 +306,7 @@ export function FilteredJobCard({ job, resumeText }: FilteredJobCardProps) {
               <span className="line-clamp-2">{job.title}</span>
               <ExternalLink className="h-4 w-4 opacity-0 group-hover:opacity-100 transition-opacity flex-shrink-0 hidden md:block" />
             </h3>
+            {/* Primary job info */}
             <div className="flex flex-wrap items-center gap-2 md:gap-4 text-xs md:text-sm text-muted-foreground mb-3">
               <span 
                 className="font-medium hover:text-primary cursor-pointer transition-colors flex items-center gap-1"
@@ -324,11 +325,27 @@ export function FilteredJobCard({ job, resumeText }: FilteredJobCardProps) {
                   <span className="whitespace-nowrap">{getRelativeTime(job.postedDate)}</span>
                 </span>
               )}
-              {job.salaryInfo && (
-                <span className="flex items-center gap-1">
-                  <DollarSign className="h-3 w-3 flex-shrink-0" />
-                  <span className="truncate">{job.salaryInfo}</span>
-                </span>
+            </div>
+            
+            {/* Additional job details */}
+            <div className="flex flex-wrap items-center gap-2 md:gap-4 text-xs text-muted-foreground mb-4">
+              {job.workType && (
+                <Badge variant="secondary" className="text-xs">
+                  <Briefcase className="h-3 w-3 mr-1" />
+                  {job.workType}
+                </Badge>
+              )}
+              {job.experienceLevel && (
+                <Badge variant="outline" className="text-xs">
+                  <GraduationCap className="h-3 w-3 mr-1" />
+                  {job.experienceLevel}
+                </Badge>
+              )}
+              {(job.salary || job.salaryInfo) && (
+                <Badge variant="outline" className="text-xs text-green-600 border-green-200">
+                  <DollarSign className="h-3 w-3 mr-1" />
+                  {job.salary || job.salaryInfo}
+                </Badge>
               )}
             </div>
           </div>
@@ -347,51 +364,85 @@ export function FilteredJobCard({ job, resumeText }: FilteredJobCardProps) {
               <span className="sm:hidden">No</span>
             </Badge>
           )}
-          {job.canApply && (
-            <Button 
-              size="sm" 
-              className="tech-btn text-xs md:text-sm"
-              onClick={handleApplyClick}
-              disabled={applyStep !== 'idle'}
-            >
-              {applyStep === 'idle' && (
-                <>
-                  <Send className="h-3 w-3 mr-1" />
-                  Apply
-                </>
-              )}
-              {applyStep === 'checking-gmail' && (
-                <>
-                  <Loader2 className="h-3 w-3 mr-1 animate-spin" />
-                  Checking Gmail...
-                </>
-              )}
-              {applyStep === 'scraping-company' && (
-                <>
-                  <Loader2 className="h-3 w-3 mr-1 animate-spin" />
-                  Loading Company...
-                </>
-              )}
-              {applyStep === 'generating-email' && (
-                <>
-                  <Sparkles className="h-3 w-3 mr-1 animate-pulse" />
-                  Generating Email...
-                </>
-              )}
-              {applyStep === 'ready' && (
-                <>
-                  <CheckCircle className="h-3 w-3 mr-1" />
-                  Ready
-                </>
-              )}
-            </Button>
-          )}
+          <div className="flex items-center gap-2">
+            {job.canApply && (
+              <Button 
+                size="sm" 
+                className="tech-btn text-xs md:text-sm"
+                onClick={handleApplyClick}
+                disabled={applyStep !== 'idle'}
+              >
+                {applyStep === 'idle' && (
+                  <>
+                    <Send className="h-3 w-3 mr-1" />
+                    Apply
+                  </>
+                )}
+                {applyStep === 'checking-gmail' && (
+                  <>
+                    <Loader2 className="h-3 w-3 mr-1 animate-spin" />
+                    Checking...
+                  </>
+                )}
+                {applyStep === 'scraping-company' && (
+                  <>
+                    <Loader2 className="h-3 w-3 mr-1 animate-spin" />
+                    Loading...
+                  </>
+                )}
+                {applyStep === 'generating-email' && (
+                  <>
+                    <Sparkles className="h-3 w-3 mr-1 animate-pulse" />
+                    Generating...
+                  </>
+                )}
+                {applyStep === 'ready' && (
+                  <>
+                    <CheckCircle className="h-3 w-3 mr-1" />
+                    Ready
+                  </>
+                )}
+              </Button>
+            )}
+            {job.applyUrl && (
+              <Button 
+                size="sm" 
+                variant="outline"
+                className="text-xs md:text-sm"
+                onClick={handleViewJob}
+              >
+                <Globe className="h-3 w-3 mr-1" />
+                LinkedIn
+              </Button>
+            )}
+          </div>
         </div>
       </div>
       
+      {/* Job Description */}
+      {job.description && (
+        <div className="mb-4 p-3 bg-muted/30 rounded-lg border">
+          <h4 className="text-xs font-semibold text-muted-foreground mb-2 uppercase tracking-wide">Job Description</h4>
+          <p className="text-xs md:text-sm text-foreground line-clamp-3 leading-relaxed">
+            {job.description.length > 200 ? `${job.description.substring(0, 200)}...` : job.description}
+          </p>
+          {job.description.length > 200 && (
+            <Button 
+              variant="ghost" 
+              size="sm" 
+              className="text-xs text-primary hover:text-primary/80 p-0 h-auto mt-2"
+              onClick={() => {/* TODO: Expand description */}}
+            >
+              Read more →
+            </Button>
+          )}
+        </div>
+      )}
+      
       {job.requirement && (
-        <div className="mb-4">
-          <p className="text-xs md:text-sm text-gray-600 line-clamp-2">
+        <div className="mb-4 p-3 bg-blue-50 rounded-lg border border-blue-100">
+          <h4 className="text-xs font-semibold text-blue-700 mb-2 uppercase tracking-wide">Requirements</h4>
+          <p className="text-xs md:text-sm text-blue-800 line-clamp-2">
             {job.requirement}
           </p>
         </div>
@@ -460,15 +511,23 @@ export function FilteredJobCard({ job, resumeText }: FilteredJobCardProps) {
             </div>
           )}
           {job.jobPosterEmail && (
-            <div className="space-y-2 pt-2 border-t border-border">
-              <div className="flex flex-col sm:flex-row sm:items-center gap-2">
+            <div className="space-y-2 pt-3 border-t border-border bg-primary/5 -mx-3 -mb-3 px-3 pb-3 rounded-b-lg">
+              <div className="flex items-center gap-2 mb-2">
+                <div className="flex items-center justify-center w-8 h-8 rounded-full bg-primary/10">
+                  <Mail className="h-4 w-4 text-primary" />
+                </div>
+                <div className="flex-1">
+                  <p className="text-xs font-semibold text-primary uppercase tracking-wide">Direct Contact Available</p>
+                  <p className="text-xs text-muted-foreground">Apply directly to the hiring manager</p>
+                </div>
+              </div>
+              <div className="flex flex-col sm:flex-row sm:items-center gap-2 bg-background rounded-md p-2 border">
                 <div className="flex items-center space-x-2">
-                  <Mail className="h-4 w-4 text-primary flex-shrink-0" />
                   <span className="text-xs md:text-sm font-medium">Email:</span>
                 </div>
                 <a 
                   href={`mailto:${job.jobPosterEmail}`}
-                  className="text-xs md:text-sm text-primary hover:underline transition-colors break-all"
+                  className="text-xs md:text-sm text-primary hover:underline transition-colors break-all font-mono"
                 >
                   {job.jobPosterEmail}
                 </a>
