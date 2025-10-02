@@ -1,4 +1,5 @@
 import type { Express, Request, Response } from 'express';
+import express from 'express';
 import { db } from '../db';
 import { users, dodoPayments } from '../../shared/schema';
 import { eq } from 'drizzle-orm';
@@ -108,8 +109,10 @@ export function registerDodoPaymentRoutes(app: Express) {
     }
   });
 
-  // Dodo Payments webhook endpoint
-  app.post('/api/payments/webhook/dodo', async (req: Request, res: Response) => {
+  // Dodo Payments webhook endpoint - must use raw body for signature verification
+  app.post('/api/payments/webhook/dodo', 
+    express.raw({ type: 'application/json' }), 
+    async (req: Request, res: Response) => {
     try {
       console.log('[DODO-WEBHOOK] Received webhook');
 
@@ -118,9 +121,11 @@ export function registerDodoPaymentRoutes(app: Express) {
         return res.status(500).json({ error: 'Webhook not configured' });
       }
 
+      // Get raw body for signature verification (Express raw middleware provides Buffer)
+      const rawBody = req.body.toString('utf8');
+      
       // Verify webhook signature
       const webhook = new Webhook(DODO_WEBHOOK_SECRET);
-      const rawBody = JSON.stringify(req.body);
       
       const webhookHeaders = {
         'webhook-id': req.headers['webhook-id'] as string || '',
@@ -130,7 +135,8 @@ export function registerDodoPaymentRoutes(app: Express) {
 
       await webhook.verify(rawBody, webhookHeaders);
 
-      const payload = req.body;
+      // Parse the verified payload
+      const payload = JSON.parse(rawBody);
       console.log('[DODO-WEBHOOK] Event type:', payload.event_type);
 
       const userId = payload.data?.metadata?.user_id;

@@ -8,6 +8,16 @@ Preferred communication style: Technical and detailed explanations with specific
 
 ## Recent Changes
 
+### October 2, 2025 - Dodo Payments Integration for Pro Plan
+- **Payment Gateway**: Integrated Dodo Payments for Pro plan subscriptions ($29/month)
+- **Database Schema**: Added dodoPayments table to track payment transactions, checkout sessions, and subscription status
+- **Backend Services**: Created Dodo Payments service layer for checkout session creation and payment verification
+- **API Routes**: Implemented `/api/payments/checkout`, `/api/payments/webhook/dodo`, `/api/payments/subscription-status`, and `/api/payments/history`
+- **Webhook Security**: Proper webhook signature verification using StandardWebhooks for secure payment processing
+- **Frontend UI**: Beautiful Pro plan upgrade page with pricing, features, and seamless Dodo Payments checkout integration
+- **Pro Features**: Unlimited job searches, access to all jobs (including those without discoverable emails), priority support, and Pro badge
+- **Subscription Management**: 30-day subscription with automatic renewal tracking and expiration handling
+
 ### September 28, 2025 - GitHub Preparation & Documentation
 - **CRITICAL BUG RESOLVED**: Fixed Free Plan vs Pro Plan display showing "0 unlocked jobs" instead of actual count
 - **TypeScript Cleanup**: Reduced errors from 49 to 37 through proper type casting and error handling
@@ -55,4 +65,4 @@ Preferred communication style: Technical and detailed explanations with specific
 - **Validation**: Zod.
 - **Styling**: Tailwind CSS.
 - **Authentication**: Google OAuth 2.0 (for user authentication and Gmail API access).
-- **APIs**: Apify (for LinkedIn job scraping and email verification), OpenAI (for personalized email generation), Cashfree (for payment gateway integration).
+- **APIs**: Apify (for LinkedIn job scraping and email verification), OpenAI (for personalized email generation), Dodo Payments (primary payment gateway for Pro plan subscriptions).
