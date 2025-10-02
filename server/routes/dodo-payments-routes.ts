@@ -1,6 +1,6 @@
 import type { Express, Request, Response } from 'express';
-import { db } from '@db';
-import { users, dodoPayments } from '@shared/schema';
+import { db } from '../db';
+import { users, dodoPayments } from '../../shared/schema';
 import { eq } from 'drizzle-orm';
 import { createCheckoutSession, verifyPayment, getSubscriptionStatus } from '../services/dodo-payments';
 import { Webhook } from 'standardwebhooks';

@@ -31,6 +31,7 @@ import AuthCallback from "@/pages/auth-callback";
 import Admin from "@/pages/admin";
 import PaymentSuccess from "@/pages/payment-success";
 import PaymentFeedback from "@/pages/payment-feedback";
+import Upgrade from "@/pages/upgrade";
 
 // Homepage redirect component
 const HomepageRedirect = () => {
@@ -59,6 +60,7 @@ function Router() {
       <Route path="/analytics" component={isAuthenticated ? Analytics : ProtectedRouteRedirect} />
       <Route path="/settings" component={isAuthenticated ? Settings : ProtectedRouteRedirect} />
       <Route path="/subscribe" component={isAuthenticated ? Subscribe : ProtectedRouteRedirect} />
+      <Route path="/upgrade" component={isAuthenticated ? Upgrade : ProtectedRouteRedirect} />
       <Route path="/results/:requestId" component={isAuthenticated ? Results : ProtectedRouteRedirect} />
       <Route path="/admin" component={isAuthenticated ? Admin : ProtectedRouteRedirect} />
       
