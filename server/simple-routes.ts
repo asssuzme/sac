@@ -4,6 +4,7 @@ import { db } from "./db";
 import { users, jobScrapingRequests, emailApplications, gmailCredentials, type User } from "@shared/schema";
 import { eq, desc, and, gte, sql } from "drizzle-orm";
 import { registerGmailAuthRoutes } from './routes/gmail-auth';
+import { registerDodoPaymentRoutes } from './routes/dodo-payments-routes';
 import OpenAI from "openai";
 import multer from "multer";
 import { google } from "googleapis";
@@ -538,6 +539,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Initialize Passport
   app.use(passport.initialize());
   app.use(passport.session());
+
+  // Register Dodo Payments routes
+  registerDodoPaymentRoutes(app);
 
   // CORS configuration for production
   app.use((req, res, next) => {

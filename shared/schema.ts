@@ -118,6 +118,25 @@ export const insertEmailApplicationSchema = createInsertSchema(emailApplications
 export type InsertEmailApplication = z.infer<typeof insertEmailApplicationSchema>;
 export type EmailApplication = typeof emailApplications.$inferSelect;
 
+// Dodo Payments table for tracking payment transactions
+export const dodoPayments = pgTable("dodo_payments", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  userId: varchar("user_id").references(() => users.id).notNull(),
+  paymentId: varchar("payment_id").unique(), // Dodo payment ID
+  checkoutSessionId: varchar("checkout_session_id").unique(), // Dodo checkout session ID
+  amount: integer("amount").notNull(), // Amount in cents
+  currency: varchar("currency").default("USD"),
+  status: varchar("status").notNull(), // pending, succeeded, failed, refunded
+  productId: varchar("product_id"), // Dodo product ID
+  subscriptionId: varchar("subscription_id"), // For recurring payments
+  metadata: jsonb("metadata"), // Store additional payment info
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+  updatedAt: timestamp("updated_at").defaultNow().notNull(),
+});
+
+export type DodoPayment = typeof dodoPayments.$inferSelect;
+export type InsertDodoPayment = typeof dodoPayments.$inferInsert;
+
 // Validation schema for LinkedIn URL
 export const linkedinUrlSchema = z.object({
   linkedinUrl: z.string()
