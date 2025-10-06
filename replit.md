@@ -8,6 +8,14 @@ Preferred communication style: Technical and detailed explanations with specific
 
 ## Recent Changes
 
+### October 6, 2025 - Critical Authentication Fix
+- **HTTPS Cookie Configuration**: Fixed session cookies for Replit's HTTPS development environment
+- **Root Cause**: Replit dev URLs use HTTPS (*.replit.dev) but NODE_ENV=development, causing cookie security mismatch
+- **Session Fix**: Detects HTTPS/Replit environment and sets `secure: true` + `sameSite: 'none'` for proper cross-origin cookies
+- **Logout Fix**: Updated logout to clear cookies with matching security configuration
+- **Browser Compatibility**: Resolves intermittent signin/signup failures across Safari, Chrome, and Comet browsers
+- **Production Ready**: Cookie configuration automatically adapts to localhost (insecure) vs Replit/production (secure HTTPS)
+
 ### October 2, 2025 - Dodo Payments Integration for Pro Plan
 - **Payment Gateway**: Integrated Dodo Payments for Pro plan subscriptions ($29/month)
 - **Database Schema**: Added dodoPayments table to track payment transactions, checkout sessions, and subscription status
