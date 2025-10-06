@@ -26,6 +26,7 @@ AI JobHunter automates job applications through:
 - 🔐 **Google OAuth**: Secure authentication and Gmail integration
 - 📊 **Real-time Progress**: Live updates during job processing
 - 📈 **Analytics Dashboard**: Track applications and success metrics
+- 💳 **Pro Plan Subscriptions**: Seamless payment integration with Dodo Payments ($29/month)
 
 ### Technical Architecture
 - ⚡ **React 18 + TypeScript**: Modern frontend with type safety
@@ -54,6 +55,7 @@ AI JobHunter automates job applications through:
 - **Gmail API** for email sending
 - **OpenAI API** for email generation
 - **Apify** for LinkedIn scraping
+- **Dodo Payments** for Pro plan subscriptions
 
 ### Infrastructure
 - **Neon Database** (serverless PostgreSQL)
@@ -114,6 +116,10 @@ OPENAI_API_KEY=your_openai_api_key
 # Apify (for LinkedIn scraping)
 APIFY_API_KEY=your_apify_api_key
 
+# Dodo Payments (for Pro plan subscriptions)
+DODO_API_KEY=your_dodo_api_key
+DODO_WEBHOOK_SECRET=your_dodo_webhook_secret
+
 # PostgreSQL Connection (auto-set by DATABASE_URL)
 PGHOST=your_pg_host
 PGPORT=5432
@@ -143,6 +149,13 @@ PGDATABASE=your_pg_database
 2. Go to Settings → Integrations
 3. Generate new API token
 4. This is used for LinkedIn job and profile scraping
+
+#### 4. Dodo Payments API Key
+1. Sign up at [Dodo Payments](https://dodopayments.com/)
+2. Navigate to Developer Settings
+3. Create new API key and webhook secret
+4. Configure webhook URL: `https://your-domain.com/api/payments/webhook/dodo`
+5. This enables Pro plan subscriptions ($29/month)
 
 ## 📖 API Documentation
 
@@ -209,10 +222,11 @@ Get user dashboard statistics including recent searches.
 
 The application uses PostgreSQL with Drizzle ORM. Key tables:
 
-- **users**: User accounts and profile information
+- **users**: User accounts, profile information, and subscription status
 - **job_scraping_requests**: Job search requests and results
 - **email_applications**: Sent email tracking
 - **gmail_credentials**: OAuth tokens for Gmail API access
+- **dodo_payments**: Payment transactions and subscription tracking
 
 ### Job Processing Pipeline
 
@@ -226,10 +240,15 @@ The application uses PostgreSQL with Drizzle ORM. Key tables:
 
 ### Free vs Pro Plan Logic
 
-- **Free Plan**: Shows jobs where contact emails were successfully found
-- **Pro Plan**: Shows all jobs including those without contact information
+- **Free Plan**: Shows jobs where contact emails were successfully found (typically ~3% of results)
+- **Pro Plan** ($29/month): Unlocks all jobs including those without contact information
+  - Unlimited job searches
+  - Access to all job postings
+  - Priority support
+  - Pro badge throughout the platform
 - **Contact Discovery Rate**: Typically finds emails for ~3% of job postings
 - **Display Logic**: Jobs with `canApply: true` are shown in Free plan
+- **Subscription Management**: 30-day auto-renewal tracked via Dodo Payments webhooks
 
 ## 🔄 Development Workflow
 
