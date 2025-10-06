@@ -1250,18 +1250,16 @@ Format the email with proper greeting and sign-off.`;
         console.log(`Processing file: ${fileName}, type: ${mimeType}, size: ${uploadedFile.buffer.length} bytes`);
         
         if (uploadedFile.mimetype === 'application/pdf') {
-          // Extract text from PDF using pdf-lib
+          // Extract text from PDF using pdf-parse
           try {
-            const { PDFDocument } = await import('pdf-lib');
-            const pdfDoc = await PDFDocument.load(uploadedFile.buffer);
-            const pages = pdfDoc.getPages();
-            
-            // Simple text extraction - store file for now, text extraction can be improved later
-            resumeText = `PDF with ${pages.length} pages uploaded`;
-            console.log(`Extracted ${resumeText.length} characters from PDF`);
+            const pdfParse = (await import('pdf-parse')).default;
+            const pdfData = await pdfParse(uploadedFile.buffer);
+            resumeText = pdfData.text.trim();
+            console.log(`Extracted ${resumeText.length} characters from PDF (${pdfData.numpages} pages)`);
           } catch (error) {
             console.error('PDF parsing error:', error);
-            resumeText = ''; // Still store the file even if text extraction fails
+            // Fallback: still store the file even if text extraction fails
+            resumeText = '';
           }
         } else if (uploadedFile.mimetype === 'application/vnd.openxmlformats-officedocument.wordprocessingml.document') {
           // Extract text from DOCX
