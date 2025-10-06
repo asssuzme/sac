@@ -5,7 +5,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Alert, AlertDescription } from "@/components/ui/alert";
-import { Loader2, Send, Mail, Copy, CheckCircle, Sparkles, ShieldCheck, Unlink, PartyPopper, XCircle } from "lucide-react";
+import { Loader2, Send, Mail, Copy, CheckCircle, Sparkles, ShieldCheck, Unlink, PartyPopper, XCircle, Paperclip, FileText } from "lucide-react";
 import { useMutation, useQuery } from "@tanstack/react-query";
 import { apiRequest, queryClient } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
@@ -56,6 +56,12 @@ export function EmailComposerModal({
     queryKey: ['/api/auth/gmail/status'],
     enabled: isOpen
   }) as { data?: { authorized?: boolean; needsRefresh?: boolean; email?: string } };
+  
+  // Fetch resume data to show attachment
+  const { data: resumeData } = useQuery({
+    queryKey: ['/api/user/resume'],
+    enabled: isOpen
+  }) as { data?: { hasResume?: boolean; fileName?: string; uploadedAt?: string } };
   
   // Handle Gmail authorization - separate from login
   const authorizeGmailMutation = useMutation({
@@ -276,6 +282,21 @@ export function EmailComposerModal({
               disabled={isGeneratingEmail}
             />
           </div>
+
+          {/* Resume Attachment Display */}
+          {resumeData?.hasResume && resumeData?.fileName && (
+            <div className="border border-green-200 bg-green-50 rounded-lg p-3">
+              <div className="flex items-center gap-2 text-sm text-green-800">
+                <Paperclip className="h-4 w-4" />
+                <FileText className="h-4 w-4" />
+                <span className="font-medium">Attachment:</span>
+                <span className="font-semibold">{resumeData.fileName}</span>
+              </div>
+              <div className="text-xs text-green-600 mt-1 ml-8">
+                Your resume will be automatically attached to this email
+              </div>
+            </div>
+          )}
 
           {!generatedEmail && !isGeneratingEmail && (
             <Alert>
