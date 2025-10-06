@@ -1,5 +1,9 @@
 # AI JobHunter Developer Guide 🛠️
 
+> **Quick Links**: [README](README.md) | [Setup Guide](SETUP.md) | [Contributing](CONTRIBUTING.md) | [API Docs](API_DOCUMENTATION.md)
+
+This guide provides in-depth technical documentation for developers working on the AI JobHunter codebase.
+
 ## Table of Contents
 - [Architecture Overview](#architecture-overview)
 - [Database Schema](#database-schema) 

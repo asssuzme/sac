@@ -1,4 +1,4 @@
-=# AI-JobHunter.com API Documentation
+# AI-JobHunter.com API Documentation
 
 ## Base URL
 - Production: `https://ai-jobhunter.com/api`
@@ -40,7 +40,7 @@ Detailed health check with all service statuses.
     "externalApis": {
       "openai": true,
       "apify": true,
-      "cashfree": true
+      "dodopayments": true
     }
   },
   "version": "1.0.0",
@@ -355,65 +355,91 @@ Gets weekly analytics data.
 
 ## Payment & Subscription
 
-### POST /api/payment/create-order
-Creates a payment order for subscription.
+### POST /api/payments/checkout
+Creates a Dodo Payments checkout session for Pro plan subscription.
 
 **Authentication:** Required
 
 **Request Body:**
 ```json
 {
-  "plan": "pro",
-  "duration": "monthly"
+  "plan": "pro"
 }
 ```
 
 **Response:**
 ```json
 {
-  "orderId": "order_abc123",
-  "amount": 1999,
-  "currency": "INR",
-  "paymentUrl": "https://payments.cashfree.com/..."
+  "checkoutUrl": "https://dodopayments.com/checkout/...",
+  "sessionId": "cs_abc123xyz"
 }
 ```
 
-### POST /api/payment/verify
-Verifies a payment after completion.
+**Error Responses:**
+- `401` - User not authenticated
+- `500` - Failed to create checkout session
 
-**Authentication:** Required
+### POST /api/payments/webhook/dodo
+Webhook endpoint for Dodo Payments (handles payment confirmations).
 
-**Request Body:**
-```json
-{
-  "orderId": "order_abc123",
-  "paymentId": "pay_xyz789"
-}
-```
+**Authentication:** Webhook signature verification using StandardWebhooks
 
-### POST /api/payment/webhook
-Webhook endpoint for payment gateway (Cashfree).
+**Headers Required:**
+- `webhook-id`: Webhook identifier
+- `webhook-signature`: HMAC signature
+- `webhook-timestamp`: Unix timestamp
 
-**Authentication:** Webhook signature verification
+**Note:** This endpoint is called by Dodo Payments, not by clients.
 
-**Note:** This endpoint is called by Cashfree, not by clients.
+**Events Handled:**
+- `payment.success` - Activates Pro subscription
+- `subscription.created` - Creates subscription record
+- `subscription.cancelled` - Deactivates subscription
 
-### GET /api/subscription/status
-Gets user's subscription status.
+### GET /api/payments/subscription-status
+Gets user's current subscription status.
 
 **Authentication:** Required
 
 **Response:**
 ```json
 {
+  "isPro": true,
   "plan": "pro",
   "status": "active",
-  "expiresAt": "2025-02-10T19:00:00.000Z",
-  "features": {
-    "jobScrapingLimit": "unlimited",
-    "emailGeneration": true,
-    "analytics": true
-  }
+  "expiresAt": "2025-03-01T00:00:00.000Z",
+  "price": "$29/month"
+}
+```
+
+**Response (Free Plan):**
+```json
+{
+  "isPro": false,
+  "plan": "free",
+  "status": "inactive"
+}
+```
+
+### GET /api/payments/history
+Gets user's payment transaction history.
+
+**Authentication:** Required
+
+**Response:**
+```json
+{
+  "payments": [
+    {
+      "id": "pay_123",
+      "amount": 29.00,
+      "currency": "USD",
+      "status": "completed",
+      "createdAt": "2025-02-01T12:00:00.000Z",
+      "description": "Pro Plan - Monthly"
+    }
+  ],
+  "total": 1
 }
 ```
 
