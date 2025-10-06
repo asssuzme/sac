@@ -45,6 +45,7 @@ coverage/
 .cache/
 .upm/
 .pythonlibs/
+replit.nix
 
 # Database
 *.db
@@ -83,6 +84,7 @@ start-redirect.sh
 
 # Attached assets (user uploads)
 attached_assets/
+public/uploads/
 
 # Build artifacts
 postbuild.js
@@ -95,7 +97,11 @@ pnpm-lock.yaml
 direct-push.sh
 final-push-fix.sh
 
-# Old route files (replaced by simple-routes.ts)
-server/payment-routes.ts
-server/routes.ts
-server/services/cashfree.ts
+# Debug and development files
+*.md.backup
+*.bak
+
+# Old/backup documentation files
+*_FIX*.md
+*_GUIDE*.md
+*_SETUP*.md
