@@ -5,11 +5,15 @@ import { Textarea } from "@/components/ui/textarea";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Alert, AlertDescription } from "@/components/ui/alert";
-import { Loader2, Send, Mail, Copy, CheckCircle, Sparkles, ShieldCheck, Unlink } from "lucide-react";
+import { Loader2, Send, Mail, Copy, CheckCircle, Sparkles, ShieldCheck, Unlink, PartyPopper, XCircle } from "lucide-react";
 import { useMutation, useQuery } from "@tanstack/react-query";
 import { apiRequest, queryClient } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
 import { Spinner, DotsLoader } from "@/components/ui/loading-animations";
+import { motion, AnimatePresence } from "framer-motion";
+
+// Modal states for smooth transitions
+type ModalState = 'draft' | 'needs_gmail_auth' | 'sending' | 'success' | 'error';
 
 interface EmailComposerModalProps {
   isOpen: boolean;
@@ -43,6 +47,8 @@ export function EmailComposerModal({
   const [copied, setCopied] = useState(false);
   const [localGenerating, setLocalGenerating] = useState(false);
   const [showGmailAuth, setShowGmailAuth] = useState(false);
+  const [modalState, setModalState] = useState<ModalState>('draft');
+  const [errorMessage, setErrorMessage] = useState<string>('');
   const { toast } = useToast();
   
   // Check Gmail authorization status
@@ -89,6 +95,15 @@ export function EmailComposerModal({
     }
   });
 
+  // Reset modal state when dialog closes
+  useEffect(() => {
+    if (!isOpen) {
+      setModalState('draft');
+      setErrorMessage('');
+      setShowGmailAuth(false);
+    }
+  }, [isOpen]);
+
   // Update email content when generated email changes
   useEffect(() => {
     if (generatedEmail) {
@@ -106,6 +121,9 @@ export function EmailComposerModal({
 
   const sendEmailMutation = useMutation({
     mutationFn: async () => {
+      // Start sending state
+      setModalState('sending');
+      
       return await apiRequest('/api/send-email', {
         method: 'POST',
         body: JSON.stringify({
@@ -122,15 +140,17 @@ export function EmailComposerModal({
     onSuccess: (data) => {
       if (data.success) {
         if (data.sentViaGmail) {
-          // Email was sent directly via Gmail
-          toast({
-            title: "✨ Email sent successfully!",
-            description: `Your application has been sent to ${recipientEmail}. 📧 Check your Gmail Sent folder to see the magic - your email with resume attached!`,
-            duration: 8000, // Show for longer so user can read
-          });
-          onClose();
+          // Email was sent successfully via Gmail
+          setModalState('success');
+          
+          // Auto-close after 3 seconds
+          setTimeout(() => {
+            onClose();
+            setModalState('draft'); // Reset for next time
+          }, 3000);
         } else if (data.needsGmailAuth) {
           // User needs to authorize Gmail sending
+          setModalState('needs_gmail_auth');
           setShowGmailAuth(true);
         } else {
           // Fall back to opening in email client
@@ -145,37 +165,26 @@ export function EmailComposerModal({
             description: "Opening in your email client. Please send the email from there.",
           });
           onClose();
+          setModalState('draft'); // Reset
         }
       } else if (data.needsGmailAuth) {
         // Show Gmail authorization prompt
+        setModalState('needs_gmail_auth');
         setShowGmailAuth(true);
       } else if (data.requiresSignIn) {
-        toast({
-          title: "Sign in required",
-          description: "Please sign in with Google to send emails",
-          variant: "destructive"
-        });
+        setModalState('error');
+        setErrorMessage('Please sign in with Google to send emails');
       } else {
-        toast({
-          title: "Email not sent",
-          description: data.error || "Please try again or use the copy option",
-          variant: "destructive"
-        });
+        setModalState('error');
+        setErrorMessage(data.error || 'Failed to send email. Please try again or use the copy option.');
       }
     },
     onError: (error: any) => {
+      setModalState('error');
       if (error.requiresSignIn) {
-        toast({
-          title: "Sign in with Google required",
-          description: "To send emails directly from Gmail, please sign in with your Google account first.",
-          variant: "destructive"
-        });
+        setErrorMessage('To send emails directly from Gmail, please sign in with your Google account first.');
       } else {
-        toast({
-          title: "Failed to send email",
-          description: error.message || "Please try again or use the copy option",
-          variant: "destructive"
-        });
+        setErrorMessage(error.message || 'Failed to send email. Please try again or use the copy option.');
       }
     }
   });
@@ -351,6 +360,131 @@ export function EmailComposerModal({
           </div>
         </DialogFooter>
         
+        {/* SENDING State Overlay */}
+        <AnimatePresence>
+          {modalState === 'sending' && (
+            <motion.div
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
+              className="absolute inset-0 bg-background/95 backdrop-blur-sm z-50 flex items-center justify-center rounded-lg p-4"
+            >
+              <motion.div
+                initial={{ scale: 0.9, y: 20 }}
+                animate={{ scale: 1, y: 0 }}
+                className="bg-card p-8 rounded-lg shadow-lg max-w-md w-full border text-center"
+              >
+                <div className="flex justify-center mb-6">
+                  <motion.div
+                    animate={{ rotate: 360 }}
+                    transition={{ duration: 2, repeat: Infinity, ease: "linear" }}
+                    className="p-4 bg-blue-100 dark:bg-blue-900 rounded-full"
+                  >
+                    <Send className="h-8 w-8 text-blue-600 dark:text-blue-400" />
+                  </motion.div>
+                </div>
+                <h3 className="text-2xl font-semibold mb-2">Sending Your Email</h3>
+                <p className="text-sm text-muted-foreground mb-4">
+                  Attaching your resume and delivering to {recipientEmail}...
+                </p>
+                <div className="flex justify-center">
+                  <DotsLoader />
+                </div>
+              </motion.div>
+            </motion.div>
+          )}
+        </AnimatePresence>
+
+        {/* SUCCESS State Overlay */}
+        <AnimatePresence>
+          {modalState === 'success' && (
+            <motion.div
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
+              className="absolute inset-0 bg-background/95 backdrop-blur-sm z-50 flex items-center justify-center rounded-lg p-4"
+            >
+              <motion.div
+                initial={{ scale: 0.9, y: 20 }}
+                animate={{ scale: 1, y: 0 }}
+                className="bg-card p-8 rounded-lg shadow-lg max-w-md w-full border text-center"
+              >
+                <motion.div
+                  initial={{ scale: 0 }}
+                  animate={{ scale: 1 }}
+                  transition={{ type: "spring", delay: 0.2 }}
+                  className="flex justify-center mb-6"
+                >
+                  <div className="p-4 bg-green-100 dark:bg-green-900 rounded-full">
+                    <CheckCircle className="h-12 w-12 text-green-600 dark:text-green-400" />
+                  </div>
+                </motion.div>
+                <h3 className="text-2xl font-semibold mb-2 text-green-600 dark:text-green-400">
+                  Email Sent Successfully!
+                </h3>
+                <p className="text-sm text-muted-foreground mb-2">
+                  Your application has been sent to <strong>{recipientEmail}</strong>
+                </p>
+                <p className="text-xs text-muted-foreground">
+                  Check your Gmail Sent folder to see your email with resume attached!
+                </p>
+              </motion.div>
+            </motion.div>
+          )}
+        </AnimatePresence>
+
+        {/* ERROR State Overlay */}
+        <AnimatePresence>
+          {modalState === 'error' && (
+            <motion.div
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
+              className="absolute inset-0 bg-background/95 backdrop-blur-sm z-50 flex items-center justify-center rounded-lg p-4"
+            >
+              <motion.div
+                initial={{ scale: 0.9, y: 20 }}
+                animate={{ scale: 1, y: 0 }}
+                className="bg-card p-8 rounded-lg shadow-lg max-w-md w-full border text-center"
+              >
+                <div className="flex justify-center mb-6">
+                  <div className="p-4 bg-red-100 dark:bg-red-900 rounded-full">
+                    <XCircle className="h-12 w-12 text-red-600 dark:text-red-400" />
+                  </div>
+                </div>
+                <h3 className="text-2xl font-semibold mb-2 text-red-600 dark:text-red-400">
+                  Email Not Sent
+                </h3>
+                <p className="text-sm text-muted-foreground mb-6">
+                  {errorMessage}
+                </p>
+                <div className="flex gap-2">
+                  <Button
+                    variant="outline"
+                    onClick={() => {
+                      setModalState('draft');
+                      setErrorMessage('');
+                    }}
+                    className="flex-1"
+                  >
+                    Back to Draft
+                  </Button>
+                  <Button
+                    onClick={() => {
+                      setModalState('draft');
+                      setErrorMessage('');
+                      sendEmailMutation.mutate();
+                    }}
+                    className="flex-1 bg-blue-600 hover:bg-blue-700"
+                  >
+                    Try Again
+                  </Button>
+                </div>
+              </motion.div>
+            </motion.div>
+          )}
+        </AnimatePresence>
+
         {/* Gmail Authorization Prompt */}
         {showGmailAuth && (
           <div className="absolute inset-0 bg-background/80 backdrop-blur-sm z-50 flex items-center justify-center rounded-lg p-4">
@@ -382,6 +516,7 @@ export function EmailComposerModal({
                   variant="outline"
                   onClick={() => {
                     setShowGmailAuth(false);
+                    setModalState('draft');
                     // Show mailto fallback
                     const mailtoLink = `mailto:${recipientEmail}?subject=${encodeURIComponent(subject)}&body=${encodeURIComponent(emailContent)}`;
                     window.location.href = mailtoLink;

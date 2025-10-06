@@ -1047,7 +1047,11 @@ Format the email with proper greeting and sign-off.`;
         .limit(1);
 
       if (!creds || !creds.isActive) {
-        return res.status(400).json({ error: 'Gmail not connected. Please authorize Gmail first.' });
+        return res.json({ 
+          success: false,
+          needsGmailAuth: true,
+          error: 'Gmail not connected. Please authorize Gmail first.' 
+        });
       }
 
       const oauth2Client = new google.auth.OAuth2(
@@ -1145,7 +1149,11 @@ Format the email with proper greeting and sign-off.`;
         emailBody: body,
       });
 
-      res.json({ success: true });
+      res.json({ 
+        success: true, 
+        sentViaGmail: true,
+        hasAttachment: !!userResume?.resumeFileData 
+      });
     } catch (error) {
       console.error('Email send error:', error);
       res.status(500).json({ error: 'Failed to send email' });
