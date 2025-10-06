@@ -1467,12 +1467,14 @@ Format the email with proper greeting and sign-off.`;
       
       if (!resumeData?.resumeText) {
         return res.status(404).json({ 
+          hasResume: false,
           error: 'No resume found',
           message: 'Please upload your resume first'
         });
       }
       
       res.json({ 
+        hasResume: true,
         resumeText: resumeData.resumeText,
         fileName: resumeData.resumeFileName,
         uploadedAt: resumeData.resumeUploadedAt
@@ -1480,6 +1482,7 @@ Format the email with proper greeting and sign-off.`;
     } catch (error) {
       console.error('Error fetching user resume:', error);
       res.status(500).json({ 
+        hasResume: false,
         error: 'Failed to fetch resume',
         message: 'An error occurred while retrieving your resume'
       });
