@@ -25,10 +25,13 @@ console.log('=== SESSION DEBUG MODE ENABLED ===');
 
 // Detect environment properly for deployment
 const hostname = process.env.REPL_SLUG || 'localhost';
-// Production when NODE_ENV is production or when deployed
 const isProduction = process.env.NODE_ENV === 'production';
 
-// Direct fix: force session to work
+// CRITICAL FIX: Replit uses HTTPS even in dev mode, so we need to detect HTTPS properly
+const isReplitEnv = !!process.env.REPLIT_DOMAINS;
+const isLocalhost = hostname === 'localhost' || hostname.includes('localhost');
+const isHTTPS = isReplitEnv || isProduction || (!isLocalhost);
+
 // PostgreSQL session store for persistent sessions
 const PgSession = connectPgSimple(session);
 const sessionTtl = 30 * 24 * 60 * 60 * 1000; // 30 days
@@ -46,25 +49,27 @@ const sessionConfig: any = {
   rolling: true,  // Reset expiry on activity  
   name: 'connect.sid',
   cookie: {
-    secure: isProduction && !process.env.REPL_SLUG,  // Use HTTPS in production but not in Replit dev
+    // FIXED: Set secure: true for ALL HTTPS environments (including Replit dev)
+    secure: isHTTPS,
     httpOnly: true, // Security: prevent XSS attacks
     maxAge: sessionTtl, // 30 days
-    sameSite: isProduction ? 'none' : 'lax', // 'none' for production to work with cross-origin
+    // FIXED: Use 'none' for HTTPS to support cross-origin (Safari compatibility)
+    sameSite: isHTTPS ? 'none' : 'lax',
+    // Don't set domain - let browser handle it automatically
   },
 };
 
-// Don't set domain for production to avoid cookie issues
-// Let the browser handle it automatically based on the request domain
-
-console.log('Session config:', {
+console.log('🔐 Session config:', {
   isProduction,
+  isReplitEnv,
+  isLocalhost,
+  isHTTPS,
   hostname,
-  replSlug: process.env.REPL_SLUG,
-  replitDomain: process.env.REPLIT_DOMAIN,
+  replitDomains: process.env.REPLIT_DOMAINS,
   nodeEnv: process.env.NODE_ENV,
   secure: sessionConfig.cookie.secure,
-  domain: sessionConfig.cookie.domain,
-  sameSite: sessionConfig.cookie.sameSite
+  sameSite: sessionConfig.cookie.sameSite,
+  domain: sessionConfig.cookie.domain
 });
 
 app.use(session(sessionConfig));

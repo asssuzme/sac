@@ -84,12 +84,17 @@ export function setupAuthRoutes(app: Express) {
         return res.status(500).json({ message: 'Failed to logout' });
       }
       
-      // Clear the session cookie with the same options used when creating it
+      // FIXED: Clear cookie with correct options matching session config
+      // Detect HTTPS environment (Replit or production)
+      const isReplitEnv = !!process.env.REPLIT_DOMAINS;
+      const isProduction = process.env.NODE_ENV === 'production';
+      const isHTTPS = isReplitEnv || isProduction;
+      
       res.clearCookie('connect.sid', {
         path: '/',
         httpOnly: true,
-        secure: false, // Match the session config
-        sameSite: 'lax' // Match the session config
+        secure: isHTTPS,  // Match session config
+        sameSite: isHTTPS ? 'none' : 'lax'  // Match session config
       });
       
       console.log('User logged out successfully, session destroyed:', sessionId);
