@@ -1297,8 +1297,26 @@ Format the email with proper greeting and sign-off.`;
         console.log(`Received text upload: ${resumeText.length} characters`);
       }
 
-      if (!resumeText && !fileData) {
-        return res.status(400).json({ error: 'No resume content provided' });
+      // Validate that we have both file data AND extracted text
+      if (!fileData) {
+        return res.status(400).json({ error: 'No resume file provided' });
+      }
+      
+      if (!resumeText || resumeText.trim().length < 50) {
+        console.error('Resume text extraction failed or insufficient content:', {
+          textLength: resumeText?.length || 0,
+          fileName,
+          mimeType
+        });
+        
+        return res.status(400).json({ 
+          error: `Could not extract readable text from your ${fileName}. Please try:\n1. A different PDF (ensure it's text-based, not scanned images)\n2. Upload as .TXT or .DOCX format\n3. Copy-paste your resume text directly`,
+          details: {
+            fileName,
+            extractedLength: resumeText?.length || 0,
+            mimeType
+          }
+        });
       }
 
       // Update user's resume with both text and file data
