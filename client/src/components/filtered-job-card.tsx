@@ -221,6 +221,25 @@ export function FilteredJobCard({ job, resumeText: propsResumeText }: FilteredJo
   };
 
   const handleApplyClick = async () => {
+    // Check if we have an email address to send to
+    if (!job.jobPosterEmail) {
+      toast({
+        title: "Email address not available",
+        description: "This job posting doesn't have a contact email address. You may need to apply on the company website.",
+        variant: "destructive",
+        action: (
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={handleViewJob}
+          >
+            View Job
+          </Button>
+        )
+      });
+      return;
+    }
+    
     try {
       // Step 1: Check Gmail authorization using cached status first
       setApplyStep('checking-gmail');
@@ -798,12 +817,15 @@ export function FilteredJobCard({ job, resumeText: propsResumeText }: FilteredJo
       <EmailComposerModal 
         isOpen={showEmailComposer}
         onClose={() => setShowEmailComposer(false)}
-        job={job}
+        recipientEmail={job.jobPosterEmail || ''}
+        jobTitle={job.title}
+        companyName={job.companyName}
+        jobUrl={job.link}
+        companyWebsite={job.companyWebsite}
         generatedEmail={generatedEmail}
-        isGenerating={isGeneratingEmail}
-        onRegenerate={handleRegenerateEmail}
-        applyStep={applyStep}
-        resumeText={resumeText}
+        isGeneratingEmail={isGeneratingEmail}
+        onRegenerateEmail={handleRegenerateEmail}
+        showRegenerateButton={true}
       />
 
       {/* Loading Modal for Email Generation */}
