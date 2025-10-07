@@ -196,7 +196,7 @@ export function FilteredJobCard({ job, resumeText: propsResumeText }: FilteredJo
         timeout: 35000 // 35 seconds timeout for email generation
       });
       
-      if (data.success) {
+      if (data.email) {
         setGeneratedEmail(data.email);
         setApplyStep('ready');
         // Close any loading modals
