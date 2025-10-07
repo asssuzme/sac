@@ -5,6 +5,7 @@ import { users, jobScrapingRequests, emailApplications, gmailCredentials, type U
 import { eq, desc, and, gte, sql } from "drizzle-orm";
 import { registerGmailAuthRoutes } from './routes/gmail-auth';
 import { registerDodoPaymentRoutes } from './routes/dodo-payments-routes';
+import { refreshGmailToken } from './gmailOAuth';
 import OpenAI from "openai";
 import multer from "multer";
 import { google } from "googleapis";
@@ -236,6 +237,111 @@ async function scrapeLinkedInProfile(job: any): Promise<any> {
   }
 }
 
+// Helper function to ensure Gmail credentials are valid and refresh if needed
+async function ensureValidGmailCredentials(userId: string): Promise<{
+  accessToken: string;
+  refreshToken: string;
+  isValid: boolean;
+  needsReauth: boolean;
+}> {
+  try {
+    // Get Gmail credentials from database
+    const [creds] = await db
+      .select()
+      .from(gmailCredentials)
+      .where(eq(gmailCredentials.userId, userId))
+      .limit(1);
+
+    if (!creds || !creds.isActive) {
+      console.log(`Gmail not connected for user ${userId}`);
+      return { 
+        accessToken: '', 
+        refreshToken: '', 
+        isValid: false, 
+        needsReauth: true 
+      };
+    }
+
+    // Check if token is expired
+    const now = new Date();
+    const expiresAt = new Date(creds.expiresAt);
+    const isExpired = expiresAt <= now;
+
+    if (!isExpired) {
+      // Token is still valid
+      console.log(`Gmail token still valid for user ${userId}, expires at ${expiresAt}`);
+      return {
+        accessToken: creds.accessToken,
+        refreshToken: creds.refreshToken || '',
+        isValid: true,
+        needsReauth: false
+      };
+    }
+
+    // Token is expired, try to refresh
+    console.log(`Gmail token expired for user ${userId}, attempting refresh...`);
+    
+    if (!creds.refreshToken) {
+      console.error(`No refresh token available for user ${userId}`);
+      return {
+        accessToken: '',
+        refreshToken: '',
+        isValid: false,
+        needsReauth: true
+      };
+    }
+
+    const newAccessToken = await refreshGmailToken(creds.refreshToken);
+    
+    if (!newAccessToken) {
+      console.error(`Failed to refresh Gmail token for user ${userId}`);
+      // Mark credentials as inactive if refresh fails
+      await db
+        .update(gmailCredentials)
+        .set({
+          isActive: false,
+          updatedAt: new Date()
+        })
+        .where(eq(gmailCredentials.userId, userId));
+      
+      return {
+        accessToken: '',
+        refreshToken: '',
+        isValid: false,
+        needsReauth: true
+      };
+    }
+
+    // Update database with new access token
+    const newExpiresAt = new Date(Date.now() + 3600 * 1000); // 1 hour from now
+    await db
+      .update(gmailCredentials)
+      .set({
+        accessToken: newAccessToken,
+        expiresAt: newExpiresAt,
+        updatedAt: new Date()
+      })
+      .where(eq(gmailCredentials.userId, userId));
+
+    console.log(`Gmail token refreshed successfully for user ${userId}`);
+    
+    return {
+      accessToken: newAccessToken,
+      refreshToken: creds.refreshToken,
+      isValid: true,
+      needsReauth: false
+    };
+  } catch (error) {
+    console.error(`Error managing Gmail credentials for user ${userId}:`, error);
+    return {
+      accessToken: '',
+      refreshToken: '',
+      isValid: false,
+      needsReauth: true
+    };
+  }
+}
+
 // Helper function to generate job application email using AI
 async function generateJobApplicationEmail(job: any, resumeText: string): Promise<{ subject: string; body: string }> {
   if (!openai) {
@@ -287,15 +393,14 @@ Format the email with proper greeting and sign-off.`;
 // Helper function to send job application email via Gmail
 async function sendJobApplicationEmail(user: any, job: any, emailContent: { subject: string; body: string }, requestId: string): Promise<boolean> {
   try {
-    // Get Gmail credentials
-    const [creds] = await db
-      .select()
-      .from(gmailCredentials)
-      .where(eq(gmailCredentials.userId, user.id))
-      .limit(1);
-
-    if (!creds || !creds.isActive) {
-      console.log(`Gmail not connected for user ${user.id} - skipping email`);
+    // Ensure Gmail credentials are valid and refresh if needed
+    const credentials = await ensureValidGmailCredentials(user.id);
+    
+    if (!credentials.isValid) {
+      console.log(`Gmail credentials invalid or expired for user ${user.id} - skipping email`);
+      if (credentials.needsReauth) {
+        console.log(`User ${user.id} needs to re-authorize Gmail`);
+      }
       return false;
     }
 
@@ -305,8 +410,8 @@ async function sendJobApplicationEmail(user: any, job: any, emailContent: { subj
     );
 
     oauth2Client.setCredentials({
-      access_token: creds.accessToken,
-      refresh_token: creds.refreshToken,
+      access_token: credentials.accessToken,
+      refresh_token: credentials.refreshToken,
     });
 
     const gmail = google.gmail({ version: 'v1', auth: oauth2Client });
@@ -1076,18 +1181,15 @@ Format the email with proper greeting and sign-off.`;
         fileDataSample: userResume?.resumeFileData?.substring(0, 50) // First 50 chars of base64
       });
       
-      // Always use Gmail - no SendGrid
-      const [creds] = await db
-        .select()
-        .from(gmailCredentials)
-        .where(eq(gmailCredentials.userId, req.user!.id))
-        .limit(1);
-
-      if (!creds || !creds.isActive) {
+      // Ensure Gmail credentials are valid and refresh if needed
+      const credentials = await ensureValidGmailCredentials(req.user!.id);
+      
+      if (!credentials.isValid) {
+        console.log(`Gmail credentials invalid or expired for user ${req.user!.id}`);
         return res.json({ 
           success: false,
           needsGmailAuth: true,
-          error: 'Gmail not connected. Please authorize Gmail first.' 
+          error: 'Gmail authorization expired or invalid. Please re-authorize Gmail.' 
         });
       }
 
@@ -1097,8 +1199,8 @@ Format the email with proper greeting and sign-off.`;
       );
 
       oauth2Client.setCredentials({
-        access_token: creds.accessToken,
-        refresh_token: creds.refreshToken,
+        access_token: credentials.accessToken,
+        refresh_token: credentials.refreshToken,
       });
 
       const gmail = google.gmail({ version: 'v1', auth: oauth2Client });
@@ -1584,16 +1686,13 @@ Format the email with proper greeting and sign-off.`;
         });
       }
       
-      // Check if user has Gmail connected
-      const [gmailCreds] = await db
-        .select()
-        .from(gmailCredentials)
-        .where(eq(gmailCredentials.userId, req.user!.id))
-        .limit(1);
+      // Ensure Gmail credentials are valid and refresh if needed
+      const credentials = await ensureValidGmailCredentials(req.user!.id);
       
-      if (!gmailCreds || !gmailCreds.isActive) {
+      if (!credentials.isValid) {
+        console.log(`Gmail credentials invalid or expired for user ${req.user!.id}`);
         return res.status(400).json({ 
-          error: 'Gmail not connected. Please authorize Gmail first.' 
+          error: 'Gmail authorization expired or invalid. Please re-authorize Gmail.' 
         });
       }
       
@@ -1604,8 +1703,8 @@ Format the email with proper greeting and sign-off.`;
       );
       
       oauth2Client.setCredentials({
-        access_token: gmailCreds.accessToken,
-        refresh_token: gmailCreds.refreshToken,
+        access_token: credentials.accessToken,
+        refresh_token: credentials.refreshToken,
       });
       
       const gmail = google.gmail({ version: 'v1', auth: oauth2Client });
