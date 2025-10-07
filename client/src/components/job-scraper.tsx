@@ -22,6 +22,8 @@ import {
   Zap,
   MapPin,
   Briefcase,
+  Building2,
+  Users,
   Lock,
   Filter,
   Mail,
@@ -475,60 +477,173 @@ export function JobScraper({ onComplete }: JobScraperProps = {}) {
     });
   };
 
+  // Add typewriter effect for status messages
+  const [typewriterText, setTypewriterText] = useState("");
+  const [isTyping, setIsTyping] = useState(false);
+  
+  useEffect(() => {
+    const text = getStatusMessage();
+    if (text !== typewriterText && isProcessing) {
+      setIsTyping(true);
+      setTypewriterText("");
+      let index = 0;
+      const interval = setInterval(() => {
+        if (index < text.length) {
+          setTypewriterText(prev => text.slice(0, index + 1));
+          index++;
+        } else {
+          setIsTyping(false);
+          clearInterval(interval);
+        }
+      }, 50);
+      return () => clearInterval(interval);
+    }
+  }, [getStatusMessage(), isProcessing]);
+
+  // Animated dots for processing text
+  const [dotCount, setDotCount] = useState(0);
+  useEffect(() => {
+    if (!isProcessing) return;
+    const interval = setInterval(() => {
+      setDotCount((prev) => (prev + 1) % 4);
+    }, 500);
+    return () => clearInterval(interval);
+  }, [isProcessing]);
+
+  const getProcessingText = () => {
+    return "Processing" + ".".repeat(dotCount);
+  };
+
   // Show full-screen loading animation when processing
   if (isProcessing) {
+    // LinkedIn logo SVG path
+    const linkedInPath = "M416 32H31.9C14.3 32 0 46.5 0 64.3v383.4C0 465.5 14.3 480 31.9 480H416c17.6 0 32-14.5 32-32.3V64.3c0-17.8-14.4-32.3-32-32.3zM135.4 416H69V202.2h66.5V416zm-33.2-243c-21.3 0-38.5-17.3-38.5-38.5S80.9 96 102.2 96c21.2 0 38.5 17.3 38.5 38.5 0 21.3-17.2 38.5-38.5 38.5zm282.1 243h-66.4V312c0-24.8-.5-56.7-34.5-56.7-34.6 0-39.9 27-39.9 54.9V416h-66.4V202.2h63.7v29.2h.9c8.9-16.8 30.6-34.5 62.9-34.5 67.2 0 79.7 44.3 79.7 101.9V416z";
+
     return (
       <motion.div
         className="relative w-full flex items-center justify-center overflow-hidden"
         style={{ minHeight: "calc(90vh - 120px)" }}
         initial={{ opacity: 0 }}
-        animate={{ opacity: 1 }}
+        animate={{ opacity: 1, scale: [0.95, 1] }}
         transition={{ duration: 0.5 }}
       >
-        {/* Animated gradient background */}
-        <div className="absolute inset-0 rounded-lg overflow-hidden">
-          <motion.div
-            className="absolute inset-0 bg-gradient-to-br from-blue-500/10 via-purple-500/10 to-pink-500/10"
-            animate={{
-              backgroundPosition: ["0% 0%", "100% 100%", "0% 0%"],
-            }}
-            transition={{
-              duration: 15,
-              repeat: Infinity,
-              ease: "linear"
-            }}
-            style={{
-              backgroundSize: "400% 400%"
-            }}
-          />
-          {/* Floating orbs */}
-          <motion.div
-            className="absolute top-1/4 left-1/4 w-64 h-64 bg-blue-500/20 rounded-full blur-3xl"
-            animate={{
-              x: [0, 50, 0],
-              y: [0, -50, 0],
-              scale: [1, 1.2, 1],
-            }}
-            transition={{
-              duration: 20,
-              repeat: Infinity,
-              ease: "easeInOut"
-            }}
-          />
-          <motion.div
-            className="absolute bottom-1/4 right-1/4 w-64 h-64 bg-purple-500/20 rounded-full blur-3xl"
-            animate={{
-              x: [0, -50, 0],
-              y: [0, 50, 0],
-              scale: [1, 1.3, 1],
-            }}
-            transition={{
-              duration: 25,
-              repeat: Infinity,
-              ease: "easeInOut"
-            }}
-          />
-        </div>
+        {/* Breathing/Pulsing effect for entire modal */}
+        <motion.div
+          className="absolute inset-0"
+          animate={{
+            scale: [1, 1.02, 1],
+          }}
+          transition={{
+            duration: 3,
+            repeat: Infinity,
+            ease: "easeInOut"
+          }}
+        >
+          {/* Animated gradient waves background */}
+          <div className="absolute inset-0 rounded-lg overflow-hidden">
+            {/* Multiple gradient layers for depth */}
+            <motion.div
+              className="absolute inset-0 bg-gradient-to-br from-blue-600/5 via-purple-600/5 to-pink-600/5"
+              animate={{
+                backgroundPosition: ["0% 0%", "100% 100%", "0% 0%"],
+              }}
+              transition={{
+                duration: 20,
+                repeat: Infinity,
+                ease: "linear"
+              }}
+              style={{
+                backgroundSize: "400% 400%"
+              }}
+            />
+            
+            {/* Wave effect layer */}
+            <svg className="absolute inset-0 w-full h-full opacity-10">
+              <defs>
+                <linearGradient id="wave-gradient" x1="0%" y1="0%" x2="100%" y2="100%">
+                  <stop offset="0%" stopColor="#3b82f6" />
+                  <stop offset="50%" stopColor="#8b5cf6" />
+                  <stop offset="100%" stopColor="#ec4899" />
+                </linearGradient>
+              </defs>
+              {[0, 1, 2].map((index) => (
+                <motion.path
+                  key={index}
+                  d={`M0,${200 + index * 50} Q${250},${150 + index * 50} ${500},${200 + index * 50} T${1000},${200 + index * 50}`}
+                  fill="none"
+                  stroke="url(#wave-gradient)"
+                  strokeWidth="2"
+                  animate={{
+                    d: [
+                      `M0,${200 + index * 50} Q${250},${150 + index * 50} ${500},${200 + index * 50} T${1000},${200 + index * 50}`,
+                      `M0,${200 + index * 50} Q${250},${250 + index * 50} ${500},${200 + index * 50} T${1000},${200 + index * 50}`,
+                      `M0,${200 + index * 50} Q${250},${150 + index * 50} ${500},${200 + index * 50} T${1000},${200 + index * 50}`,
+                    ]
+                  }}
+                  transition={{
+                    duration: 3 + index,
+                    repeat: Infinity,
+                    ease: "easeInOut",
+                    delay: index * 0.5
+                  }}
+                />
+              ))}
+            </svg>
+
+            {/* Enhanced floating orbs with glowing effect */}
+            <motion.div
+              className="absolute top-1/4 left-1/4 w-72 h-72 rounded-full"
+              style={{
+                background: "radial-gradient(circle, rgba(59,130,246,0.3) 0%, rgba(59,130,246,0) 70%)",
+                filter: "blur(40px)"
+              }}
+              animate={{
+                x: [0, 100, 0],
+                y: [0, -100, 0],
+                scale: [1, 1.3, 1],
+              }}
+              transition={{
+                duration: 15,
+                repeat: Infinity,
+                ease: "easeInOut"
+              }}
+            />
+            <motion.div
+              className="absolute bottom-1/4 right-1/4 w-72 h-72 rounded-full"
+              style={{
+                background: "radial-gradient(circle, rgba(139,92,246,0.3) 0%, rgba(139,92,246,0) 70%)",
+                filter: "blur(40px)"
+              }}
+              animate={{
+                x: [0, -100, 0],
+                y: [0, 100, 0],
+                scale: [1.2, 1, 1.2],
+              }}
+              transition={{
+                duration: 18,
+                repeat: Infinity,
+                ease: "easeInOut"
+              }}
+            />
+            <motion.div
+              className="absolute top-1/2 left-1/2 w-64 h-64 rounded-full"
+              style={{
+                background: "radial-gradient(circle, rgba(236,72,153,0.2) 0%, rgba(236,72,153,0) 70%)",
+                filter: "blur(30px)"
+              }}
+              animate={{
+                x: [-100, 100, -100],
+                y: [-50, 50, -50],
+                scale: [1, 1.4, 1],
+              }}
+              transition={{
+                duration: 12,
+                repeat: Infinity,
+                ease: "easeInOut"
+              }}
+            />
+          </div>
+        </motion.div>
 
         <div className="relative z-10 w-full max-w-sm sm:max-w-lg lg:max-w-2xl px-4">
           <motion.div 
@@ -554,30 +669,37 @@ export function JobScraper({ onComplete }: JobScraperProps = {}) {
                   >
                     <CheckCircle2 className="h-24 w-24 text-green-500" />
                   </motion.div>
-                  {/* Confetti effect */}
-                  {[...Array(20)].map((_, i) => (
+                  {/* Enhanced confetti effect */}
+                  {[...Array(30)].map((_, i) => (
                     <motion.div
                       key={i}
-                      className="absolute w-2 h-2 bg-gradient-to-r from-blue-500 to-purple-500"
+                      className="absolute w-3 h-3 rounded-full"
+                      style={{
+                        background: `linear-gradient(135deg, ${
+                          ['#3b82f6', '#8b5cf6', '#ec4899', '#f59e0b', '#10b981'][i % 5]
+                        }, ${
+                          ['#60a5fa', '#a78bfa', '#f472b6', '#fbbf24', '#34d399'][i % 5]
+                        })`,
+                        left: "50%",
+                        top: "50%",
+                      }}
                       initial={{
                         x: 0,
                         y: 0,
                         opacity: 1,
+                        scale: 0,
                       }}
                       animate={{
-                        x: (Math.random() - 0.5) * 400,
-                        y: (Math.random() - 0.5) * 400,
-                        opacity: 0,
-                        rotate: Math.random() * 360,
+                        x: (Math.random() - 0.5) * 500,
+                        y: (Math.random() - 0.5) * 500,
+                        opacity: [1, 1, 0],
+                        scale: [0, 1.5, 0],
+                        rotate: Math.random() * 720,
                       }}
                       transition={{
-                        duration: 1,
+                        duration: 1.5,
                         delay: i * 0.02,
                         ease: "easeOut"
-                      }}
-                      style={{
-                        left: "50%",
-                        top: "50%",
                       }}
                     />
                   ))}
@@ -585,75 +707,229 @@ export function JobScraper({ onComplete }: JobScraperProps = {}) {
               )}
             </AnimatePresence>
 
-            {/* Main Loading Container */}
-            <div className="text-center space-y-4 sm:space-y-6">
-              <motion.div className="relative inline-block">
-                {/* Pulsing glow behind icon */}
+            {/* Main Loading Container with 3D effect */}
+            <div className="text-center space-y-4 sm:space-y-6 perspective-1000">
+              <div className="relative inline-block">
+                {/* Complex glow layers */}
                 <motion.div
-                  className="absolute inset-0 bg-gradient-to-r from-blue-500/40 via-purple-500/40 to-pink-500/40 rounded-full blur-2xl"
+                  className="absolute -inset-8 rounded-full opacity-60"
+                  style={{
+                    background: "radial-gradient(circle, rgba(59,130,246,0.4) 0%, transparent 70%)",
+                    filter: "blur(20px)"
+                  }}
                   animate={{
-                    scale: [1, 1.5, 1],
-                    opacity: [0.5, 0.8, 0.5]
+                    scale: [1, 1.3, 1],
+                    opacity: [0.4, 0.7, 0.4]
                   }}
                   transition={{
-                    duration: 3,
+                    duration: 2.5,
                     repeat: Infinity,
                     ease: "easeInOut"
                   }}
                 />
                 
-                {/* Animated magnifying glass with AI sparkles */}
+                {/* Orbiting LinkedIn logos and job icons */}
+                <div className="absolute inset-0 flex items-center justify-center">
+                  {/* LinkedIn logos */}
+                  {[0, 120, 240].map((rotation, index) => (
+                    <motion.div
+                      key={`linkedin-${index}`}
+                      className="absolute"
+                      style={{
+                        width: "150px",
+                        height: "150px",
+                      }}
+                      animate={{
+                        rotate: rotation + 360,
+                      }}
+                      transition={{
+                        duration: 20,
+                        repeat: Infinity,
+                        ease: "linear",
+                      }}
+                    >
+                      <motion.div
+                        className="absolute"
+                        style={{
+                          top: "-20px",
+                          left: "50%",
+                          transform: "translateX(-50%)",
+                        }}
+                        animate={{
+                          rotate: -(rotation + 360),
+                          scale: [0.8, 1, 0.8],
+                        }}
+                        transition={{
+                          rotate: {
+                            duration: 20,
+                            repeat: Infinity,
+                            ease: "linear",
+                          },
+                          scale: {
+                            duration: 3,
+                            repeat: Infinity,
+                            ease: "easeInOut",
+                            delay: index * 0.3,
+                          }
+                        }}
+                      >
+                        <div className="w-8 h-8 rounded bg-gradient-to-br from-blue-500 to-blue-600 shadow-lg flex items-center justify-center">
+                          <span className="text-white font-bold text-xs">in</span>
+                        </div>
+                      </motion.div>
+                    </motion.div>
+                  ))}
+                  
+                  {/* Job-related icons orbiting */}
+                  {[
+                    { Icon: Briefcase, rotation: 60, color: "from-purple-500 to-purple-600" },
+                    { Icon: Building2, rotation: 180, color: "from-pink-500 to-pink-600" },
+                    { Icon: Users, rotation: 300, color: "from-amber-500 to-amber-600" },
+                  ].map(({ Icon, rotation, color }, index) => (
+                    <motion.div
+                      key={`icon-${index}`}
+                      className="absolute"
+                      style={{
+                        width: "120px",
+                        height: "120px",
+                      }}
+                      animate={{
+                        rotate: rotation - 360,
+                      }}
+                      transition={{
+                        duration: 15,
+                        repeat: Infinity,
+                        ease: "linear",
+                      }}
+                    >
+                      <motion.div
+                        className={`absolute p-2 rounded-full bg-gradient-to-br ${color} shadow-lg`}
+                        style={{
+                          top: "-15px",
+                          left: "50%",
+                          transform: "translateX(-50%)",
+                        }}
+                        animate={{
+                          rotate: -(rotation - 360),
+                          y: [0, -5, 0],
+                        }}
+                        transition={{
+                          rotate: {
+                            duration: 15,
+                            repeat: Infinity,
+                            ease: "linear",
+                          },
+                          y: {
+                            duration: 2,
+                            repeat: Infinity,
+                            ease: "easeInOut",
+                            delay: index * 0.4,
+                          }
+                        }}
+                      >
+                        <Icon className="h-5 w-5 text-white" />
+                      </motion.div>
+                    </motion.div>
+                  ))}
+                </div>
+                
+                {/* 3D magnifying glass with perspective */}
                 <motion.div
-                  className="relative"
+                  className="relative preserve-3d"
                   animate={{ 
-                    rotate: [0, 10, -10, 0],
+                    rotateY: [0, 360],
+                    rotateX: [-10, 10, -10],
                   }}
                   transition={{
-                    duration: 4,
-                    repeat: Infinity,
-                    ease: "easeInOut"
+                    rotateY: {
+                      duration: 8,
+                      repeat: Infinity,
+                      ease: "linear"
+                    },
+                    rotateX: {
+                      duration: 4,
+                      repeat: Infinity,
+                      ease: "easeInOut"
+                    }
+                  }}
+                  style={{
+                    transformStyle: "preserve-3d",
                   }}
                 >
-                  <Search className="h-16 w-16 sm:h-20 sm:w-20 lg:h-24 lg:w-24 text-primary relative z-10" />
-                  {/* AI sparkles */}
-                  {[...Array(3)].map((_, i) => (
+                  <motion.div
+                    animate={{
+                      scale: [1, 1.1, 1],
+                    }}
+                    transition={{
+                      duration: 2,
+                      repeat: Infinity,
+                      ease: "easeInOut"
+                    }}
+                  >
+                    <Search className="h-16 w-16 sm:h-20 sm:w-20 lg:h-24 lg:w-24 text-primary relative z-10 drop-shadow-2xl" />
+                  </motion.div>
+                  
+                  {/* Sparkles around magnifying glass */}
+                  {[...Array(5)].map((_, i) => (
                     <motion.div
                       key={i}
                       className="absolute"
                       animate={{
                         scale: [0, 1, 0],
                         opacity: [0, 1, 0],
+                        rotate: [0, 180, 360],
                       }}
                       transition={{
-                        duration: 2,
+                        duration: 2.5,
                         repeat: Infinity,
-                        delay: i * 0.6,
+                        delay: i * 0.5,
                         ease: "easeOut"
                       }}
                       style={{
-                        left: `${30 + i * 20}%`,
-                        top: `${20 + i * 15}%`,
+                        left: `${20 + i * 15}%`,
+                        top: `${10 + i * 15}%`,
                       }}
                     >
-                      <Sparkles className="h-4 w-4 text-yellow-500" />
+                      <Sparkles className="h-3 w-3 sm:h-4 sm:w-4 text-yellow-400 drop-shadow-lg" />
                     </motion.div>
                   ))}
                 </motion.div>
-              </motion.div>
+              </div>
 
               <div className="space-y-3">
+                {/* Typewriter effect for status message */}
                 <motion.h2 
-                  className="text-xl sm:text-2xl lg:text-3xl font-bold bg-gradient-to-r from-blue-600 to-purple-600 bg-clip-text text-transparent"
-                  key={getStatusMessage()}
-                  initial={{ opacity: 0, y: 10 }}
-                  animate={{ opacity: 1, y: 0 }}
-                  transition={{ duration: 0.5 }}
+                  className="text-xl sm:text-2xl lg:text-3xl font-bold bg-gradient-to-r from-blue-600 via-purple-600 to-pink-600 bg-clip-text text-transparent"
+                  animate={{
+                    backgroundPosition: ["0% 50%", "100% 50%", "0% 50%"],
+                  }}
+                  transition={{
+                    duration: 5,
+                    repeat: Infinity,
+                    ease: "linear"
+                  }}
+                  style={{
+                    backgroundSize: "200% 200%",
+                  }}
                 >
-                  {getStatusMessage()}
+                  <span className="inline-block">
+                    {typewriterText}
+                    {isTyping && (
+                      <motion.span
+                        className="inline-block w-0.5 h-6 sm:h-7 lg:h-8 bg-current ml-1 align-middle"
+                        animate={{ opacity: [1, 1, 0, 0] }}
+                        transition={{
+                          duration: 1,
+                          repeat: Infinity,
+                          times: [0, 0.5, 0.5, 1],
+                          ease: "linear"
+                        }}
+                      />
+                    )}
+                  </span>
                 </motion.h2>
                 <motion.p 
                   className="text-sm sm:text-base lg:text-lg text-muted-foreground px-2"
-                  key={getEstimatedTime()}
                   initial={{ opacity: 0 }}
                   animate={{ opacity: 1 }}
                   transition={{ duration: 0.5 }}
@@ -663,13 +939,44 @@ export function JobScraper({ onComplete }: JobScraperProps = {}) {
               </div>
             </div>
 
-            {/* Enhanced Progress Bar */}
+            {/* Enhanced Progress Bar with liquid wave effect */}
             <div className="relative">
-              {/* Glow effect */}
+              {/* Particle effects floating upward from progress bar */}
+              <div className="absolute inset-0 overflow-hidden">
+                {[...Array(8)].map((_, i) => (
+                  <motion.div
+                    key={i}
+                    className="absolute w-1 h-1 sm:w-2 sm:h-2 rounded-full bg-gradient-to-r from-blue-400 to-purple-400"
+                    initial={{
+                      x: `${(animatedProgress - 5 + i * 2)}%`,
+                      y: "50%",
+                      opacity: 0,
+                    }}
+                    animate={{
+                      y: [20, -40],
+                      opacity: [0, 1, 0],
+                      scale: [0, 1.5, 0],
+                    }}
+                    transition={{
+                      duration: 2,
+                      repeat: Infinity,
+                      delay: i * 0.3,
+                      ease: "easeOut"
+                    }}
+                  />
+                ))}
+              </div>
+
+              {/* Enhanced glow effect */}
               <motion.div 
-                className="absolute -inset-1 bg-gradient-to-r from-blue-500 via-purple-500 to-pink-500 rounded-full blur-md opacity-75"
+                className="absolute -inset-2 rounded-full opacity-60"
+                style={{
+                  background: "linear-gradient(90deg, #3b82f6, #8b5cf6, #ec4899)",
+                  filter: "blur(15px)",
+                }}
                 animate={{
-                  opacity: [0.5, 0.75, 0.5]
+                  opacity: [0.4, 0.8, 0.4],
+                  scale: [0.98, 1.02, 0.98],
                 }}
                 transition={{
                   duration: 2,
@@ -678,7 +985,7 @@ export function JobScraper({ onComplete }: JobScraperProps = {}) {
                 }}
               />
               
-              <div className="relative bg-background/80 backdrop-blur-xl rounded-full p-4 sm:p-6 border border-primary/20">
+              <div className="relative bg-background/80 backdrop-blur-xl rounded-full p-4 sm:p-6 border border-primary/20 shadow-2xl">
                 <div className="space-y-3 sm:space-y-4">
                   <div className="flex justify-between items-center">
                     <motion.span 
@@ -687,80 +994,159 @@ export function JobScraper({ onComplete }: JobScraperProps = {}) {
                       transition={{ duration: 2, repeat: Infinity }}
                     >
                       <motion.div
-                        className="w-2 h-2 bg-green-500 rounded-full"
-                        animate={{ scale: [1, 1.5, 1] }}
+                        className="w-2 h-2 sm:w-3 sm:h-3 rounded-full"
+                        style={{
+                          background: "radial-gradient(circle, #10b981, #34d399)",
+                          boxShadow: "0 0 10px rgba(16, 185, 129, 0.5)"
+                        }}
+                        animate={{ 
+                          scale: [1, 1.5, 1],
+                          boxShadow: [
+                            "0 0 10px rgba(16, 185, 129, 0.5)",
+                            "0 0 20px rgba(16, 185, 129, 0.8)",
+                            "0 0 10px rgba(16, 185, 129, 0.5)",
+                          ]
+                        }}
                         transition={{ duration: 1, repeat: Infinity }}
                       />
-                      Processing
+                      {getProcessingText()}
                     </motion.span>
                     <motion.span 
-                      className="text-lg sm:text-xl lg:text-2xl font-bold bg-gradient-to-r from-blue-600 to-purple-600 bg-clip-text text-transparent"
+                      className="text-lg sm:text-xl lg:text-2xl font-bold"
                       key={getProgressPercentage()}
-                      initial={{ scale: 1.2, opacity: 0 }}
-                      animate={{ scale: 1, opacity: 1 }}
-                      transition={{ duration: 0.3 }}
+                      initial={{ scale: 1.3, opacity: 0 }}
+                      animate={{ 
+                        scale: [1, 1.05, 1],
+                        opacity: 1,
+                      }}
+                      transition={{ 
+                        scale: {
+                          duration: 0.5,
+                          repeat: Infinity,
+                          ease: "easeInOut"
+                        },
+                        opacity: {
+                          duration: 0.3
+                        }
+                      }}
+                      style={{
+                        background: "linear-gradient(90deg, #3b82f6, #8b5cf6)",
+                        WebkitBackgroundClip: "text",
+                        WebkitTextFillColor: "transparent",
+                        textShadow: "0 0 20px rgba(59, 130, 246, 0.3)"
+                      }}
                     >
                       {getProgressPercentage()}%
                     </motion.span>
                   </div>
                   
-                  <div className="relative h-4 sm:h-6 bg-secondary/30 rounded-full overflow-hidden">
+                  {/* Liquid wave progress bar */}
+                  <div className="relative h-4 sm:h-6 bg-secondary/30 rounded-full overflow-hidden shadow-inner">
+                    {/* Wave background pattern */}
+                    <svg className="absolute inset-0 w-full h-full">
+                      <defs>
+                        <pattern id="wave-pattern" x="0" y="0" width="40" height="100%" patternUnits="userSpaceOnUse">
+                          <motion.path
+                            d="M0,12 Q10,6 20,12 T40,12"
+                            fill="none"
+                            stroke="rgba(255,255,255,0.1)"
+                            strokeWidth="1"
+                            animate={{
+                              d: ["M0,12 Q10,6 20,12 T40,12", "M0,12 Q10,18 20,12 T40,12", "M0,12 Q10,6 20,12 T40,12"]
+                            }}
+                            transition={{
+                              duration: 2,
+                              repeat: Infinity,
+                              ease: "easeInOut"
+                            }}
+                          />
+                        </pattern>
+                      </defs>
+                      <rect width="100%" height="100%" fill="url(#wave-pattern)" />
+                    </svg>
+                    
                     <motion.div
-                      className="absolute inset-0 bg-gradient-to-r from-blue-500 via-purple-500 to-pink-500"
-                      style={{ width: `${animatedProgress}%` }}
+                      className="absolute inset-0"
+                      style={{ 
+                        width: `${animatedProgress}%`,
+                        background: "linear-gradient(90deg, #3b82f6, #8b5cf6, #ec4899)",
+                      }}
                       transition={{ duration: 0.5, ease: "easeOut" }}
                     >
-                      {/* Animated shimmer effect */}
+                      {/* Liquid wave effect on top */}
                       <motion.div
-                        className="absolute inset-0 bg-gradient-to-r from-transparent via-white/30 to-transparent"
-                        animate={{ x: ["-100%", "200%"] }}
+                        className="absolute inset-0"
+                        style={{
+                          background: "linear-gradient(90deg, transparent, rgba(255,255,255,0.3), transparent)",
+                        }}
+                        animate={{ 
+                          x: ["-200%", "200%"],
+                        }}
                         transition={{
                           duration: 1.5,
                           repeat: Infinity,
                           ease: "linear"
                         }}
                       />
+                      
+                      {/* Wave animation at the edge */}
+                      <motion.div
+                        className="absolute right-0 top-0 bottom-0 w-8"
+                        animate={{
+                          scaleY: [1, 1.2, 1],
+                        }}
+                        transition={{
+                          duration: 0.5,
+                          repeat: Infinity,
+                          ease: "easeInOut"
+                        }}
+                        style={{
+                          background: "linear-gradient(90deg, transparent, rgba(255,255,255,0.4))",
+                          filter: "blur(4px)"
+                        }}
+                      />
                     </motion.div>
-                    
-                    {/* Progress bar glow at the end */}
-                    <motion.div
-                      className="absolute top-0 bottom-0 w-8 bg-gradient-to-r from-transparent to-white/30 blur-md"
-                      style={{ left: `${animatedProgress - 2}%` }}
-                    />
                   </div>
                 </div>
               </div>
             </div>
 
-            {/* Dynamic message */}
+            {/* Dynamic message with enhanced animation */}
             <motion.div
               className="text-center"
               key={dynamicMessage}
-              initial={{ opacity: 0, y: 20 }}
-              animate={{ opacity: 1, y: 0 }}
-              exit={{ opacity: 0, y: -20 }}
-              transition={{ duration: 0.5 }}
+              initial={{ opacity: 0, y: 20, scale: 0.9 }}
+              animate={{ opacity: 1, y: 0, scale: 1 }}
+              exit={{ opacity: 0, y: -20, scale: 0.9 }}
+              transition={{ duration: 0.5, type: "spring" }}
             >
-              <p className="text-muted-foreground italic text-sm sm:text-base px-2">{dynamicMessage}</p>
+              <p className="text-muted-foreground italic text-sm sm:text-base px-2 leading-relaxed">
+                {dynamicMessage}
+              </p>
             </motion.div>
 
-            {/* Cancel Button */}
+            {/* Cancel Button with enhanced styling */}
             <motion.div
               className="flex justify-center"
-              initial={{ opacity: 0 }}
-              animate={{ opacity: 1 }}
-              transition={{ delay: 1 }}
+              initial={{ opacity: 0, y: 20 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ delay: 1, type: "spring" }}
             >
-              <Button
-                variant="outline"
-                size="lg"
-                onClick={handleAbort}
-                className="gap-2 text-sm sm:text-base px-4 sm:px-6 h-10 sm:h-12"
+              <motion.div
+                whileHover={{ scale: 1.05 }}
+                whileTap={{ scale: 0.95 }}
               >
-                <X className="h-4 w-4" />
-                <span className="hidden sm:inline">Cancel Search</span>
-                <span className="sm:hidden">Cancel</span>
-              </Button>
+                <Button
+                  variant="outline"
+                  size="lg"
+                  onClick={handleAbort}
+                  className="gap-2 text-sm sm:text-base px-4 sm:px-6 h-10 sm:h-12 border-2 hover:shadow-lg transition-all"
+                >
+                  <X className="h-4 w-4" />
+                  <span className="hidden sm:inline">Cancel Search</span>
+                  <span className="sm:hidden">Cancel</span>
+                </Button>
+              </motion.div>
             </motion.div>
           </motion.div>
         </div>
