@@ -4,6 +4,7 @@ import { useQuery } from "@tanstack/react-query";
 import { apiRequest, queryClient } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
 import { FilteredJobCard } from "@/components/filtered-job-card";
+import { BulkApplyModal } from "@/components/bulk-apply-modal";
 // Removed Tabs - now showing only jobs with discoverable emails
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { 
@@ -55,6 +56,7 @@ export default function Results() {
   const { user } = useAuth();
   const [userResume, setUserResume] = useState<string | null>(null);
   const [showProPlanModal, setShowProPlanModal] = useState(false);
+  const [showBulkApplyModal, setShowBulkApplyModal] = useState(false);
   const [activeTab, setActiveTab] = useState("with-contacts");
   
   // Loading animation state
@@ -738,12 +740,7 @@ export default function Results() {
               <Button
                 variant="default"
                 size="lg"
-                onClick={() => {
-                  toast({
-                    title: "Bulk Application",
-                    description: "This feature is coming soon!",
-                  });
-                }}
+                onClick={() => setShowBulkApplyModal(true)}
                 className="relative overflow-hidden bg-gradient-to-r from-primary to-accent hover:from-primary/90 hover:to-accent/90 text-white font-semibold shadow-lg hover:shadow-xl transition-all duration-300 px-4 md:px-6 py-2 md:py-3 text-sm md:text-base w-full md:w-auto max-w-xs md:max-w-none"
               >
                 <Mail className="h-4 w-4 md:h-5 md:w-5 mr-2 flex-shrink-0" />
@@ -781,6 +778,14 @@ export default function Results() {
             )}
         </div>
       </motion.div>
+
+      {/* Bulk Apply Modal */}
+      <BulkApplyModal 
+        isOpen={showBulkApplyModal}
+        onClose={() => setShowBulkApplyModal(false)}
+        jobs={jobsWithEmails}
+        resumeText={userResume}
+      />
 
       {/* Pro Plan Purchase Modal */}
       <Dialog open={showProPlanModal} onOpenChange={setShowProPlanModal}>

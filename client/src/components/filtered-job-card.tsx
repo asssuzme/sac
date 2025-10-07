@@ -86,9 +86,9 @@ export function FilteredJobCard({ job, resumeText }: FilteredJobCardProps) {
       }
 
       const requestBody = {
-        companyName: job.companyName, // Backend expects companyName as string
-        jobDescription: job.requirement || `${job.title} position at ${job.companyName}`,
-        jobTitle: job.title, // Make sure jobTitle is included
+        jobTitle: job.title || 'Position Not Specified', // Ensure jobTitle is always present
+        companyName: job.companyName || 'Company Not Specified', // Ensure companyName is always present
+        jobDescription: job.requirement || `${job.title || 'Position'} position at ${job.companyName || 'Company'}`,
         resumeText: resumeText
       };
       
