@@ -914,13 +914,21 @@ export async function registerRoutes(app: Express): Promise<Server> {
       resumeText: !!resumeText 
     });
     
-    if (!jobTitle || !companyName || !resumeText) {
+    if (!jobTitle || !companyName) {
       console.log('Validation failed - missing fields:', { 
         jobTitle: !jobTitle ? 'MISSING' : 'OK', 
-        companyName: !companyName ? 'MISSING' : 'OK', 
-        resumeText: !resumeText ? 'MISSING' : 'OK' 
+        companyName: !companyName ? 'MISSING' : 'OK'
       });
-      return res.status(400).json({ error: 'Missing required fields' });
+      return res.status(400).json({ error: 'Missing required fields: job title and company name are required' });
+    }
+    
+    // If no resume text or it's a placeholder, provide a helpful message
+    if (!resumeText || resumeText.startsWith('[Resume file:')) {
+      return res.status(400).json({ 
+        error: 'Resume text could not be extracted', 
+        message: 'Unable to generate email without resume content. Please upload a text-based PDF, DOCX, or TXT file in Settings.',
+        suggestion: 'Go to Settings and re-upload your resume in a supported format'
+      });
     }
 
     if (!openai) {
@@ -1297,26 +1305,26 @@ Format the email with proper greeting and sign-off.`;
         console.log(`Received text upload: ${resumeText.length} characters`);
       }
 
-      // Validate that we have both file data AND extracted text
+      // Validate that we have file data
       if (!fileData) {
         return res.status(400).json({ error: 'No resume file provided' });
       }
       
+      // Check if text extraction succeeded - but allow storage even if it failed
       if (!resumeText || resumeText.trim().length < 50) {
-        console.error('Resume text extraction failed or insufficient content:', {
+        console.warn('Resume text extraction failed or insufficient content:', {
           textLength: resumeText?.length || 0,
           fileName,
           mimeType
         });
         
-        return res.status(400).json({ 
-          error: `Could not extract readable text from your ${fileName}. Please try:\n1. A different PDF (ensure it's text-based, not scanned images)\n2. Upload as .TXT or .DOCX format\n3. Copy-paste your resume text directly`,
-          details: {
-            fileName,
-            extractedLength: resumeText?.length || 0,
-            mimeType
-          }
-        });
+        // Set a fallback message if no text was extracted
+        if (!resumeText || resumeText.trim().length === 0) {
+          resumeText = `[Resume file: ${fileName}] - Text extraction failed. Please upload a text-based PDF, DOCX, or TXT file for best results.`;
+        }
+        
+        // Still store the file, but warn the user
+        console.log('Storing file despite text extraction issues - user can re-upload later');
       }
 
       // Update user's resume with both text and file data
@@ -1337,12 +1345,20 @@ Format the email with proper greeting and sign-off.`;
         textLength: resumeText?.length || 0
       });
 
+      // Determine if text extraction was successful
+      const textExtractionSuccess = resumeText && resumeText.length > 50 && !resumeText.startsWith('[Resume file:');
+      
       res.json({ 
         success: true, 
-        message: 'Resume uploaded and processed successfully',
+        message: textExtractionSuccess 
+          ? 'Resume uploaded and processed successfully'
+          : 'Resume uploaded but text extraction failed. Email generation may not work properly. Please upload a text-based PDF or DOCX file.',
         fileName,
-        textExtracted: !!resumeText,
+        textExtracted: textExtractionSuccess,
         textLength: resumeText?.length || 0,
+        warning: !textExtractionSuccess 
+          ? 'Unable to extract text from this file. For best results, upload a text-based PDF, DOCX, or TXT file.'
+          : undefined,
         supportedFormats: ['.txt', '.pdf', '.doc', '.docx', '.jpg', '.jpeg', '.png', '.webp']
       });
     } catch (error) {
