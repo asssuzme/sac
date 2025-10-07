@@ -724,8 +724,14 @@ function ResultsContent({ scrapingResult, requestId, showBulkApplyModal, setShow
     enrichedJobs = scrapingResult.enrichedResults.jobs;
   }
   
+  // Ensure enrichedJobs is always an array
+  if (!Array.isArray(enrichedJobs)) {
+    console.warn('enrichedJobs is not an array, defaulting to empty array', enrichedJobs);
+    enrichedJobs = [];
+  }
+  
   // ONLY show jobs where we found hiring manager emails (canApply: true)
-  const jobsWithEmails = enrichedJobs.filter((job: any) => job.canApply);
+  const jobsWithEmails = Array.isArray(enrichedJobs) ? enrichedJobs.filter((job: any) => job.canApply) : [];
   
   // Hide jobs without discoverable emails - this is the core filtering logic
   console.log(`FILTERING: Found ${jobsWithEmails.length} jobs with discoverable emails out of ${enrichedJobs.length} total jobs`);
