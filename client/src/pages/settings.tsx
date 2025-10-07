@@ -49,7 +49,9 @@ export default function Settings() {
         title: "Resume updated",
         description: "Your resume has been successfully updated",
       });
+      // Invalidate both user and resume queries to clear cache
       queryClient.invalidateQueries({ queryKey: ['/api/auth/user'] });
+      queryClient.invalidateQueries({ queryKey: ['/api/user/resume'] });
       setIsUploadingResume(false);
     },
     onError: (error: Error) => {

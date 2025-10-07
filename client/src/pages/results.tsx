@@ -54,7 +54,6 @@ export default function Results() {
   const { requestId } = useParams();
   const [, setLocation] = useLocation();
   const { user } = useAuth();
-  const [userResume, setUserResume] = useState<string | null>(null);
   const [showProPlanModal, setShowProPlanModal] = useState(false);
   const [showBulkApplyModal, setShowBulkApplyModal] = useState(false);
   const [activeTab, setActiveTab] = useState("with-contacts");
@@ -68,6 +67,24 @@ export default function Results() {
   const [isAborted, setIsAborted] = useState(false);
   const abortRef = useRef(false);
   const { toast } = useToast();
+  
+  // Use React Query for resume fetching to properly use cache invalidation
+  const { data: resumeData, refetch: refetchResume } = useQuery({
+    queryKey: ['/api/user/resume'],
+    queryFn: async () => {
+      const response = await fetch('/api/user/resume');
+      if (response.ok) {
+        return await response.json();
+      }
+      return { hasResume: false, resumeText: null };
+    },
+    staleTime: 0, // Always considered stale to ensure fresh data
+    gcTime: 5 * 60 * 1000, // Keep in cache for 5 minutes
+    refetchOnMount: true, // Always refetch when component mounts
+    refetchOnWindowFocus: true // Refetch when window regains focus
+  });
+  
+  const userResume = resumeData?.resumeText || null;
   
   const { data: scrapingResult, isLoading } = useQuery<ScrapingResult & { resumeText?: string }>({
     queryKey: ['/api/scrape-job', requestId],
@@ -97,25 +114,6 @@ export default function Results() {
     "🚀 Jobs with verified contacts show up first in your results.",
     "✨ Each email is uniquely crafted based on the job description."
   ];
-
-  // Load user's saved resume when component mounts
-  useEffect(() => {
-    const loadUserResume = async () => {
-      try {
-        const response = await fetch('/api/user/resume');
-        if (response.ok) {
-          const data = await response.json();
-          if (data.hasResume && data.resumeText) {
-            setUserResume(data.resumeText);
-          }
-        }
-      } catch (error) {
-        console.error("Error loading user resume:", error);
-      }
-    };
-
-    loadUserResume();
-  }, []);
 
   // Handle abort
   const handleAbort = async () => {

@@ -2,11 +2,11 @@ import { useState, useRef, useEffect } from "react";
 import { FilteredJobData } from "@shared/schema";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { MapPin, ExternalLink, User, Briefcase, DollarSign, Mail, CheckCircle, XCircle, Send, Loader2, Sparkles, Globe, Building, Clock, Shield, Users, GraduationCap } from "lucide-react";
+import { MapPin, ExternalLink, User, Briefcase, DollarSign, Mail, CheckCircle, XCircle, Send, Loader2, Sparkles, Globe, Building, Clock, Shield, Users, GraduationCap, RotateCcw } from "lucide-react";
 import { CompanyProfileModal } from "./company-profile-modal";
 import { EmailComposerModal } from "./email-composer-modal";
 import { useMutation, useQuery } from "@tanstack/react-query";
-import { apiRequest } from "@/lib/queryClient";
+import { apiRequest, queryClient } from "@/lib/queryClient";
 import { motion } from "framer-motion";
 import { getRelativeTime } from "@/lib/time-utils";
 import { useToast } from "@/hooks/use-toast";
@@ -16,7 +16,7 @@ interface FilteredJobCardProps {
   resumeText?: string | null;
 }
 
-export function FilteredJobCard({ job, resumeText }: FilteredJobCardProps) {
+export function FilteredJobCard({ job, resumeText: propsResumeText }: FilteredJobCardProps) {
   const { toast } = useToast();
   const [showCompanyModal, setShowCompanyModal] = useState(false);
   const [showEmailComposer, setShowEmailComposer] = useState(false);
@@ -27,6 +27,26 @@ export function FilteredJobCard({ job, resumeText }: FilteredJobCardProps) {
   const [applyStep, setApplyStep] = useState<'idle' | 'checking-gmail' | 'scraping-company' | 'generating-email' | 'ready'>('idle');
   const [showLoadingModal, setShowLoadingModal] = useState(false);
   const [hasCheckedAutoApply, setHasCheckedAutoApply] = useState(false);
+  const [retryCount, setRetryCount] = useState(0);
+  
+  // Fetch fresh resume data using React Query to get the latest version
+  const { data: resumeData, refetch: refetchResume } = useQuery({
+    queryKey: ['/api/user/resume'],
+    queryFn: async () => {
+      const response = await fetch('/api/user/resume');
+      if (response.ok) {
+        return await response.json();
+      }
+      return { hasResume: false, resumeText: null };
+    },
+    staleTime: 0, // Always considered stale to ensure fresh data
+    gcTime: 5 * 60 * 1000, // Keep in cache for 5 minutes
+    refetchOnMount: true, // Always refetch when component mounts
+    refetchOnWindowFocus: false // Don't refetch on every focus to avoid too many requests
+  });
+  
+  // Use the fresh resume data from React Query, fallback to props if needed
+  const resumeText = resumeData?.resumeText || propsResumeText || null;
 
   // Check Gmail authorization status - fetch once on mount and cache
   const { data: gmailStatus, refetch: refetchGmailStatus } = useQuery({
@@ -77,30 +97,91 @@ export function FilteredJobCard({ job, resumeText }: FilteredJobCardProps) {
 
       // Ensure we have all required fields
       if (!resumeText) {
-        console.error('No resume text available');
-        setApplyStep('idle');
-        setShowLoadingModal(false);
-        toast({
-          title: "Resume Required",
-          description: "Please upload your resume to continue. You can upload it during a new job search or in Settings.",
-          variant: "destructive",
-          action: (
-            <Button
-              variant="outline"
-              size="sm"
-              onClick={() => window.location.href = '/settings'}
-            >
-              Go to Settings
-            </Button>
-          )
+        console.error('No resume text available, attempting to refetch...');
+        
+        // Try to refetch resume data first
+        const freshResume = await refetchResume();
+        const freshResumeText = freshResume?.data?.resumeText;
+        
+        if (!freshResumeText) {
+          setApplyStep('idle');
+          setShowLoadingModal(false);
+          
+          // Show error with retry option
+          toast({
+            title: "Resume Required",
+            description: `Please upload your resume to continue. ${retryCount > 0 ? 'Still unable to find your resume after retrying.' : 'You can upload it during a new job search or in Settings.'}`,
+            variant: "destructive",
+            action: (
+              <div className="flex gap-2">
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={async () => {
+                    setRetryCount(prev => prev + 1);
+                    // Refetch resume and retry
+                    const result = await refetchResume();
+                    if (result?.data?.resumeText) {
+                      // Resume found, retry email generation
+                      handleApplyClick();
+                    }
+                  }}
+                >
+                  <RotateCcw className="h-3 w-3 mr-1" />
+                  Retry
+                </Button>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => window.location.href = '/settings'}
+                >
+                  Go to Settings
+                </Button>
+              </div>
+            )
+          });
+          setIsGeneratingEmail(false);
+          return;
+        }
+        
+        // Resume was refetched successfully, use the fresh data
+        console.log('Resume refetched successfully, continuing with email generation');
+        // Update the requestBody to use fresh resume
+        const requestBody = {
+          jobTitle: job.title || 'Position Not Specified',
+          companyName: job.companyName || 'Company Not Specified',
+          jobDescription: job.requirement || `${job.title || 'Position'} position at ${job.companyName || 'Company'}`,
+          resumeText: freshResumeText // Use the freshly fetched resume
+        };
+        
+        // Continue with the request using fresh resume
+        console.log('Sending email generation request with fresh resume:', requestBody);
+
+        const data = await apiRequest('/api/generate-email', {
+          method: 'POST',
+          body: JSON.stringify(requestBody)
         });
+        
+        if (data.success) {
+          setGeneratedEmail(data.email);
+          setApplyStep('ready');
+          setShowCompanyModal(false);
+          setShowLoadingModal(false);
+          setShowEmailComposer(true);
+        } else {
+          console.error("Email generation failed:", data.error);
+          setApplyStep('idle');
+          setShowLoadingModal(false);
+          alert(`Email generation failed: ${data.error || 'Unknown error'}`);
+        }
         setIsGeneratingEmail(false);
-        return;
+        return; // Exit early since we handled the request
       }
 
+      // Normal flow - resume exists
       const requestBody = {
-        jobTitle: job.title || 'Position Not Specified', // Ensure jobTitle is always present
-        companyName: job.companyName || 'Company Not Specified', // Ensure companyName is always present
+        jobTitle: job.title || 'Position Not Specified',
+        companyName: job.companyName || 'Company Not Specified',
         jobDescription: job.requirement || `${job.title || 'Position'} position at ${job.companyName || 'Company'}`,
         resumeText: resumeText
       };
