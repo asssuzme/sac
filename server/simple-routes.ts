@@ -795,6 +795,34 @@ export async function registerRoutes(app: Express): Promise<Server> {
       return res.status(400).json({ error: 'LinkedIn URL is required' });
     }
 
+    // If resumeText is provided, also save it to user's profile for persistence
+    if (resumeText && req.user?.id) {
+      try {
+        // Extract file name from resume text if it contains metadata
+        let fileName = 'Resume';
+        const fileMatch = resumeText.match(/\[Resume file: (.+?)\]/);
+        if (fileMatch) {
+          fileName = fileMatch[1];
+        }
+        
+        // Save resume to user profile for permanent storage
+        await db
+          .update(users)
+          .set({
+            resumeText: resumeText,
+            resumeFileName: fileName,
+            resumeUploadedAt: new Date(),
+            updatedAt: new Date()
+          })
+          .where(eq(users.id, req.user.id));
+          
+        console.log(`[SCRAPE-JOB] Resume saved to user profile for user ${req.user.id}`);
+      } catch (error) {
+        console.error('[SCRAPE-JOB] Error saving resume to user profile:', error);
+        // Don't fail the request if resume save fails, just log it
+      }
+    }
+
     // Create job scraping request
     const [request] = await db
       .insert(jobScrapingRequests)
@@ -853,6 +881,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     res.json({
       id: request.id,
       status: request.status,
+      resumeText: request.resumeText, // Include resume text from job search request
       results: request.results, // Original scraped jobs
       filteredResults: (request as any).filteredResults || (request as any).filtered_results, // Quality filtered jobs with canApply status
       enrichedJobs: (request as any).filteredResults || (request as any).filtered_results, // Jobs array with canApply status

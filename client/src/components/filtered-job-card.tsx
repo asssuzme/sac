@@ -80,7 +80,20 @@ export function FilteredJobCard({ job, resumeText }: FilteredJobCardProps) {
         console.error('No resume text available');
         setApplyStep('idle');
         setShowLoadingModal(false);
-        alert('Please upload your resume first before applying to jobs.');
+        toast({
+          title: "Resume Required",
+          description: "Please upload your resume to continue. You can upload it during a new job search or in Settings.",
+          variant: "destructive",
+          action: (
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => window.location.href = '/settings'}
+            >
+              Go to Settings
+            </Button>
+          )
+        });
         setIsGeneratingEmail(false);
         return;
       }

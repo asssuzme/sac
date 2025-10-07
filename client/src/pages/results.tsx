@@ -69,7 +69,7 @@ export default function Results() {
   const abortRef = useRef(false);
   const { toast } = useToast();
   
-  const { data: scrapingResult, isLoading } = useQuery<ScrapingResult>({
+  const { data: scrapingResult, isLoading } = useQuery<ScrapingResult & { resumeText?: string }>({
     queryKey: ['/api/scrape-job', requestId],
     enabled: !!requestId && !isAborted && !abortRef.current,
     refetchInterval: ({ state }) => {
@@ -772,7 +772,7 @@ export default function Results() {
                   animate={{ opacity: 1, y: 0 }}
                   transition={{ delay: index * 0.05 }}
                 >
-                  <FilteredJobCard job={job} resumeText={userResume} />
+                  <FilteredJobCard job={job} resumeText={userResume || scrapingResult?.resumeText} />
                 </motion.div>
               ))
             )}
