@@ -258,11 +258,18 @@ export function JobScraper({ onComplete }: JobScraperProps = {}) {
     if (isAborted) return; // Don't process completion if aborted
     
     if (scrapingResult?.status === 'completed' && scrapingResult.enrichedResults) {
-      const enrichedJobs = scrapingResult.enrichedResults as any[];
+      // Handle both possible data structures from backend
+      let enrichedJobs: any[] = [];
+      if (Array.isArray(scrapingResult.enrichedResults)) {
+        enrichedJobs = scrapingResult.enrichedResults;
+      } else if (scrapingResult.enrichedResults?.jobs && Array.isArray(scrapingResult.enrichedResults.jobs)) {
+        enrichedJobs = scrapingResult.enrichedResults.jobs;
+      }
+      
       const totalJobs = scrapingResult.totalJobsFound || scrapingResult.results?.length || 0;
       const filteredCount = scrapingResult.filteredResults?.length || 0;
       const enrichedCount = enrichedJobs?.length || 0;
-      const withContactsCount = enrichedJobs?.filter((job: any) => job.contactEmail || job.jobPosterEmail).length || 0;
+      const withContactsCount = Array.isArray(enrichedJobs) ? enrichedJobs.filter((job: any) => job.contactEmail || job.jobPosterEmail).length : 0;
       
       // Show completion message
       toast({
