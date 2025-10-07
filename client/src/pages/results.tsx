@@ -714,7 +714,16 @@ export default function Results() {
 
 // Separate component for results content to keep the main component cleaner
 function ResultsContent({ scrapingResult, requestId, showBulkApplyModal, setShowBulkApplyModal, userResume }: any) {
-  const enrichedJobs = scrapingResult.enrichedResults?.jobs || [];
+  // Handle both possible data structures from backend
+  let enrichedJobs: any[] = [];
+  if (Array.isArray(scrapingResult.enrichedResults)) {
+    // If enrichedResults is directly an array
+    enrichedJobs = scrapingResult.enrichedResults;
+  } else if (scrapingResult.enrichedResults?.jobs && Array.isArray(scrapingResult.enrichedResults.jobs)) {
+    // If enrichedResults is an object with jobs property
+    enrichedJobs = scrapingResult.enrichedResults.jobs;
+  }
+  
   // ONLY show jobs where we found hiring manager emails (canApply: true)
   const jobsWithEmails = enrichedJobs.filter((job: any) => job.canApply);
   
