@@ -50,22 +50,31 @@ export function createGmailOAuthClient(req?: any) {
 }
 
 // Generate Gmail authorization URL
-export function getGmailAuthUrl(userId: string, req?: any): string {
+export function getGmailAuthUrl(userId: string, req?: any, forceConsent: boolean = false, returnUrl?: string): string {
   const oauth2Client = createGmailOAuthClient(req);
   
-  // Create state parameter with user ID
+  // Create state parameter with user ID and optional returnUrl
   const state = Buffer.from(JSON.stringify({
     userId,
     timestamp: Date.now(),
-    nonce: crypto.randomBytes(16).toString('hex')
+    nonce: crypto.randomBytes(16).toString('hex'),
+    returnUrl: returnUrl || '/'
   })).toString('base64');
 
-  return oauth2Client.generateAuthUrl({
+  const authUrlOptions: any = {
     access_type: 'offline',
     scope: GMAIL_SCOPES,
-    state,
-    prompt: 'consent' // Force consent screen to ensure we get refresh token
-  });
+    state
+  };
+
+  // Only force consent for first-time authorization
+  // This ensures we get a refresh token on first auth
+  // but doesn't annoy users with consent screen on subsequent auths
+  if (forceConsent) {
+    authUrlOptions.prompt = 'consent';
+  }
+
+  return oauth2Client.generateAuthUrl(authUrlOptions);
 }
 
 // Handle Gmail OAuth callback
@@ -83,7 +92,8 @@ export async function handleGmailCallback(code: string, state: string, req?: any
       userId: stateData.userId,
       accessToken: tokens.access_token,
       refreshToken: tokens.refresh_token,
-      expiresAt: tokens.expiry_date
+      expiresAt: tokens.expiry_date,
+      returnUrl: stateData.returnUrl || '/'
     };
   } catch (error) {
     console.error('Gmail OAuth callback error:', error);

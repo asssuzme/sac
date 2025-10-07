@@ -11,7 +11,9 @@ export function registerGmailAuthRoutes(app: Express) {
     try {
       // Check if user is authenticated
       const userId = req.session?.userId;
-      console.log('Gmail auth attempt - Session userId:', userId);
+      const returnUrl = req.query.returnUrl as string || '/';
+      
+      console.log('Gmail auth attempt - Session userId:', userId, 'ReturnUrl:', returnUrl);
       
       if (!userId) {
         console.log('No session found for Gmail auth');
@@ -31,9 +33,27 @@ export function registerGmailAuthRoutes(app: Express) {
         return res.status(401).json({ message: 'Unauthorized - Invalid session' });
       }
       
-      // Generate auth URL
-      const authUrl = getGmailAuthUrl(user.id, req);
-      console.log('Generated Gmail auth URL for user:', user.email);
+      // Check for existing Gmail credentials
+      const [existingCreds] = await db
+        .select()
+        .from(gmailCredentials)
+        .where(eq(gmailCredentials.userId, user.id))
+        .limit(1);
+      
+      // Determine if we should force consent
+      // Only force consent if there's no existing refresh token
+      const forceConsent = !existingCreds || !existingCreds.refreshToken;
+      
+      console.log('Gmail auth check:', {
+        userId: user.id,
+        hasExistingCreds: !!existingCreds,
+        hasRefreshToken: !!(existingCreds?.refreshToken),
+        forceConsent
+      });
+      
+      // Generate auth URL with returnUrl and conditional consent
+      const authUrl = getGmailAuthUrl(user.id, req, forceConsent, returnUrl);
+      console.log('Generated Gmail auth URL for user:', user.email, 'ForceConsent:', forceConsent);
       
       // Redirect directly to Google OAuth instead of returning JSON
       res.redirect(authUrl);
@@ -63,7 +83,8 @@ export function registerGmailAuthRoutes(app: Express) {
         userId: result.userId,
         hasAccessToken: !!result.accessToken,
         hasRefreshToken: !!result.refreshToken,
-        expiresAt: result.expiresAt
+        expiresAt: result.expiresAt,
+        returnUrl: result.returnUrl
       });
       
       // Store tokens in database
@@ -88,7 +109,11 @@ export function registerGmailAuthRoutes(app: Express) {
         });
 
       console.log('Gmail credentials stored successfully for user:', result.userId);
-      res.redirect('/?gmail=success');
+      
+      // Redirect to returnUrl with success indicator
+      const returnUrl = result.returnUrl || '/';
+      const separator = returnUrl.includes('?') ? '&' : '?';
+      res.redirect(`${returnUrl}${separator}gmail=success&auto_apply=true`);
     } catch (error) {
       console.error('Gmail callback error:', error);
       res.redirect(`/?error=gmail_auth_failed&reason=${encodeURIComponent((error as Error).message)}`);
