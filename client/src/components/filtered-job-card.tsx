@@ -151,7 +151,7 @@ export function FilteredJobCard({ job, resumeText: propsResumeText }: FilteredJo
         const requestBody = {
           jobTitle: job.title || 'Position Not Specified',
           companyName: job.companyName || 'Company Not Specified',
-          jobDescription: job.requirement || `${job.title || 'Position'} position at ${job.companyName || 'Company'}`,
+          jobDescription: job.description || job.requirement || `${job.title || 'Position'} position at ${job.companyName || 'Company'}`,
           resumeText: freshResumeText // Use the freshly fetched resume
         };
         
@@ -164,7 +164,7 @@ export function FilteredJobCard({ job, resumeText: propsResumeText }: FilteredJo
           timeout: 35000 // 35 seconds timeout for email generation
         });
         
-        if (data.success) {
+        if (data.email) {
           setGeneratedEmail(data.email);
           setApplyStep('ready');
           setShowCompanyModal(false);
@@ -184,7 +184,7 @@ export function FilteredJobCard({ job, resumeText: propsResumeText }: FilteredJo
       const requestBody = {
         jobTitle: job.title || 'Position Not Specified',
         companyName: job.companyName || 'Company Not Specified',
-        jobDescription: job.requirement || `${job.title || 'Position'} position at ${job.companyName || 'Company'}`,
+        jobDescription: job.description || job.requirement || `${job.title || 'Position'} position at ${job.companyName || 'Company'}`,
         resumeText: resumeText
       };
       
