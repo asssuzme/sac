@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef } from "react";
+import React, { useState, useEffect, useRef } from "react";
 import { useParams, useLocation } from "wouter";
 import { useQuery } from "@tanstack/react-query";
 import { apiRequest, queryClient } from "@/lib/queryClient";
@@ -157,12 +157,17 @@ export default function Results() {
   // Check if still processing
   const isProcessing = !isAborted && scrapingResult && ['pending', 'processing', 'filtering', 'enriching'].includes(scrapingResult.status);
 
+  // State for controlling transition delay after success
+  const [shouldShowResults, setShouldShowResults] = useState(false);
+
   // Update progress smoothly over 4 minutes
   useEffect(() => {
     if (!isProcessing) {
-      setAnimatedProgress(0);
-      setStartTime(null);
-      setShowSuccess(false);
+      // Don't immediately reset if we're showing success
+      if (!showSuccess) {
+        setAnimatedProgress(0);
+        setStartTime(null);
+      }
       return;
     }
 
@@ -181,7 +186,9 @@ export default function Results() {
       // If actually completed, jump to 100%
       if (scrapingResult?.status === 'completed') {
         setAnimatedProgress(100);
-        setShowSuccess(true);
+        if (!showSuccess) {
+          setShowSuccess(true);
+        }
         clearInterval(interval);
       } else {
         setAnimatedProgress(progress);
@@ -189,7 +196,18 @@ export default function Results() {
     }, 100); // Update every 100ms for smooth animation
 
     return () => clearInterval(interval);
-  }, [isProcessing, startTime, scrapingResult?.status]);
+  }, [isProcessing, startTime, scrapingResult?.status, showSuccess]);
+
+  // Control transition delay when success animation shows
+  useEffect(() => {
+    if (showSuccess && scrapingResult?.status === 'completed') {
+      // Wait 1.5 seconds for success animation to complete
+      const timer = setTimeout(() => {
+        setShouldShowResults(true);
+      }, 1500);
+      return () => clearTimeout(timer);
+    }
+  }, [showSuccess, scrapingResult?.status]);
 
   // Rotate dynamic messages
   useEffect(() => {
@@ -268,64 +286,86 @@ export default function Results() {
     return null;
   }
 
-  // Loading state
-  if (isLoading) {
-    return (
-      <DashboardLayout user={user} onLogout={() => window.location.href = "/api/auth/logout"} title="Job Results">
-        <div className="flex items-center justify-center min-h-[60vh]">
-          <motion.div
-            initial={{ opacity: 0, scale: 0.8 }}
-            animate={{ opacity: 1, scale: 1 }}
-            transition={{ duration: 0.3 }}
-            className="text-center"
-          >
-            <Loader2 className="h-16 w-16 text-primary animate-spin mx-auto mb-4" />
-            <p className="text-lg text-muted-foreground">Loading job results...</p>
-          </motion.div>
-        </div>
-      </DashboardLayout>
-    );
-  }
+  // Determine the current state for AnimatePresence key
+  const getStateKey = () => {
+    if (isLoading) return 'loading';
+    if (!scrapingResult || scrapingResult.status === 'failed') return 'error';
+    if (isProcessing && !shouldShowResults) return 'processing';
+    return 'results';
+  };
 
-  // Error state
-  if (!scrapingResult || scrapingResult.status === 'failed') {
-    return (
-      <DashboardLayout user={user} onLogout={() => window.location.href = "/api/auth/logout"} title="Job Results">
+  // Main render with AnimatePresence for smooth transitions
+  return (
+    <AnimatePresence mode="wait">
+      {/* Loading state */}
+      {isLoading && (
         <motion.div
+          key="loading"
+          initial={{ opacity: 0 }}
+          animate={{ opacity: 1 }}
+          exit={{ opacity: 0, scale: 0.95 }}
+          transition={{ duration: 0.3 }}
+        >
+          <DashboardLayout user={user} onLogout={() => window.location.href = "/api/auth/logout"} title="Job Results">
+            <div className="flex items-center justify-center min-h-[60vh]">
+              <motion.div
+                initial={{ opacity: 0, scale: 0.8 }}
+                animate={{ opacity: 1, scale: 1 }}
+                transition={{ duration: 0.3 }}
+                className="text-center"
+              >
+                <Loader2 className="h-16 w-16 text-primary animate-spin mx-auto mb-4" />
+                <p className="text-lg text-muted-foreground">Loading job results...</p>
+              </motion.div>
+            </div>
+          </DashboardLayout>
+        </motion.div>
+      )}
+
+      {/* Error state */}
+      {!isLoading && (!scrapingResult || scrapingResult.status === 'failed') && (
+        <motion.div
+          key="error"
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
-          transition={{ duration: 0.5 }}
-          className="flex items-center justify-center min-h-[60vh]"
+          exit={{ opacity: 0, scale: 0.95 }}
+          transition={{ duration: 0.4 }}
         >
-          <div className="text-center glass-card p-8 max-w-md">
-            <div className="inline-flex p-4 rounded-full bg-red-500/10 mb-4">
-              <XCircle className="h-12 w-12 text-red-600" />
+          <DashboardLayout user={user} onLogout={() => window.location.href = "/api/auth/logout"} title="Job Results">
+            <div className="flex items-center justify-center min-h-[60vh]">
+              <div className="text-center glass-card p-8 max-w-md">
+                <div className="inline-flex p-4 rounded-full bg-red-500/10 mb-4">
+                  <XCircle className="h-12 w-12 text-red-600" />
+                </div>
+                <h1 className="text-2xl font-bold mb-2">Search Failed</h1>
+                <p className="text-muted-foreground mb-6">
+                  {scrapingResult?.errorMessage || 'An error occurred while searching for jobs'}
+                </p>
+                <Link href="/">
+                  <Button className="btn-primary">
+                    <ArrowLeft className="h-4 w-4 mr-2" />
+                    Back to Dashboard
+                  </Button>
+                </Link>
+              </div>
             </div>
-            <h1 className="text-2xl font-bold mb-2">Search Failed</h1>
-            <p className="text-muted-foreground mb-6">
-              {scrapingResult?.errorMessage || 'An error occurred while searching for jobs'}
-            </p>
-            <Link href="/">
-              <Button className="btn-primary">
-                <ArrowLeft className="h-4 w-4 mr-2" />
-                Back to Dashboard
-              </Button>
-            </Link>
-          </div>
+          </DashboardLayout>
         </motion.div>
-      </DashboardLayout>
-    );
-  }
+      )}
 
-  // Processing state - Show beautiful loading animation
-  if (isProcessing) {
-    return (
-      <motion.div
-        className="fixed inset-0 min-h-screen flex items-center justify-center bg-background overflow-hidden z-50"
-        initial={{ opacity: 0 }}
-        animate={{ opacity: 1 }}
-        transition={{ duration: 0.5 }}
-      >
+      {/* Processing state - Show beautiful loading animation */}
+      {!isLoading && scrapingResult && isProcessing && !shouldShowResults && (
+        <motion.div
+          key="processing"
+          className="fixed inset-0 min-h-screen flex items-center justify-center bg-background overflow-hidden z-50"
+          initial={{ opacity: 0 }}
+          animate={{ opacity: 1 }}
+          exit={{ opacity: 0, scale: 0.95 }}
+          transition={{ 
+            duration: 0.4,
+            exit: { duration: 0.3 }
+          }}
+        >
         {/* Animated gradient background */}
         <div className="absolute inset-0">
           <motion.div
@@ -642,9 +682,38 @@ export default function Results() {
           </motion.div>
         </div>
       </motion.div>
-    );
-  }
+      )}
 
+      {/* Results state - Main content */}
+      {!isLoading && scrapingResult && scrapingResult.status === 'completed' && (showSuccess ? shouldShowResults : true) && (
+        <motion.div
+          key="results"
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          exit={{ opacity: 0, scale: 0.98 }}
+          transition={{ 
+            duration: 0.5,
+            delay: 0.2,
+            ease: "easeOut"
+          }}
+        >
+          <DashboardLayout user={user} onLogout={() => window.location.href = "/api/auth/logout"} title="Job Results">
+            <ResultsContent 
+              scrapingResult={scrapingResult}
+              requestId={requestId}
+              showBulkApplyModal={showBulkApplyModal}
+              setShowBulkApplyModal={setShowBulkApplyModal}
+              userResume={userResume}
+            />
+          </DashboardLayout>
+        </motion.div>
+      )}
+    </AnimatePresence>
+  );
+}
+
+// Separate component for results content to keep the main component cleaner
+function ResultsContent({ scrapingResult, requestId, showBulkApplyModal, setShowBulkApplyModal, userResume }: any) {
   const enrichedJobs = scrapingResult.enrichedResults?.jobs || [];
   // ONLY show jobs where we found hiring manager emails (canApply: true)
   const jobsWithEmails = enrichedJobs.filter((job: any) => job.canApply);
@@ -663,8 +732,7 @@ export default function Results() {
   const proPlanJobs = lockedJobs;
 
   return (
-    <DashboardLayout user={user} onLogout={() => window.location.href = "/api/auth/logout"} title="Job Results">
-      <motion.div
+    <motion.div
         initial={{ opacity: 0, y: 20 }}
         animate={{ opacity: 1, y: 0 }}
         transition={{ duration: 0.5 }}
@@ -774,8 +842,7 @@ export default function Results() {
                 </motion.div>
               ))
             )}
-        </div>
-      </motion.div>
+          </div>
 
       {/* Bulk Apply Modal */}
       <BulkApplyModal 
@@ -784,63 +851,6 @@ export default function Results() {
         jobs={jobsWithEmails}
         resumeText={userResume}
       />
-
-      {/* Pro Plan Purchase Modal */}
-      <Dialog open={showProPlanModal} onOpenChange={setShowProPlanModal}>
-        <DialogContent className="max-w-[95vw] sm:max-w-md p-4 md:p-6">
-          <DialogHeader>
-            <DialogTitle className="text-xl md:text-2xl font-bold">Upgrade to Pro Plan</DialogTitle>
-            <DialogDescription className="space-y-3 md:space-y-4 pt-3 md:pt-4">
-              <div className="text-base md:text-lg">
-                Unlock access to <span className="font-semibold text-primary">1000 jobs</span> with hidden contact information
-              </div>
-              
-              <div className="bg-primary/10 p-3 md:p-4 rounded-lg space-y-2">
-                <h4 className="font-semibold text-base md:text-lg">Pro Plan Benefits:</h4>
-                <ul className="space-y-1 text-xs md:text-sm">
-                  <li className="flex items-start md:items-center gap-2">
-                    <CheckCircle className="h-3 w-3 md:h-4 md:w-4 text-green-600 flex-shrink-0 mt-0.5 md:mt-0" />
-                    <span>Access all job postings without visible contacts</span>
-                  </li>
-                  <li className="flex items-start md:items-center gap-2">
-                    <CheckCircle className="h-3 w-3 md:h-4 md:w-4 text-green-600 flex-shrink-0 mt-0.5 md:mt-0" />
-                    <span>Advanced AI-powered contact discovery</span>
-                  </li>
-                  <li className="flex items-start md:items-center gap-2">
-                    <CheckCircle className="h-3 w-3 md:h-4 md:w-4 text-green-600 flex-shrink-0 mt-0.5 md:mt-0" />
-                    <span>Priority email generation</span>
-                  </li>
-                  <li className="flex items-start md:items-center gap-2">
-                    <CheckCircle className="h-3 w-3 md:h-4 md:w-4 text-green-600 flex-shrink-0 mt-0.5 md:mt-0" />
-                    <span>Unlimited job applications</span>
-                  </li>
-                </ul>
-              </div>
-
-              <div className="text-center space-y-3 md:space-y-4">
-                <div className="text-2xl md:text-3xl font-bold">
-                  $29<span className="text-base md:text-lg font-normal text-muted-foreground">/month</span>
-                </div>
-                
-                <Button 
-                  className="w-full" 
-                  size="lg"
-                  onClick={() => {
-                    // TODO: Implement Indian payment gateway
-                    window.location.href = "/subscribe";
-                  }}
-                >
-                  Upgrade Now
-                </Button>
-                
-                <p className="text-xs text-muted-foreground">
-                  Cancel anytime. No questions asked.
-                </p>
-              </div>
-            </DialogDescription>
-          </DialogHeader>
-        </DialogContent>
-      </Dialog>
-    </DashboardLayout>
+    </motion.div>
   );
 }
