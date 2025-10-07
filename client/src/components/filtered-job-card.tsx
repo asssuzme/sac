@@ -2,6 +2,7 @@ import { useState, useRef, useEffect } from "react";
 import { FilteredJobData } from "@shared/schema";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog";
 import { MapPin, ExternalLink, User, Briefcase, DollarSign, Mail, CheckCircle, XCircle, Send, Loader2, Sparkles, Globe, Building, Clock, Shield, Users, GraduationCap, RotateCcw } from "lucide-react";
 import { CompanyProfileModal } from "./company-profile-modal";
 import { EmailComposerModal } from "./email-composer-modal";
@@ -159,7 +160,8 @@ export function FilteredJobCard({ job, resumeText: propsResumeText }: FilteredJo
 
         const data = await apiRequest('/api/generate-email', {
           method: 'POST',
-          body: JSON.stringify(requestBody)
+          body: JSON.stringify(requestBody),
+          timeout: 35000 // 35 seconds timeout for email generation
         });
         
         if (data.success) {
@@ -190,7 +192,8 @@ export function FilteredJobCard({ job, resumeText: propsResumeText }: FilteredJo
 
       const data = await apiRequest('/api/generate-email', {
         method: 'POST',
-        body: JSON.stringify(requestBody)
+        body: JSON.stringify(requestBody),
+        timeout: 35000 // 35 seconds timeout for email generation
       });
       
       if (data.success) {
@@ -802,6 +805,39 @@ export function FilteredJobCard({ job, resumeText: propsResumeText }: FilteredJo
         applyStep={applyStep}
         resumeText={resumeText}
       />
+
+      {/* Loading Modal for Email Generation */}
+      <Dialog open={showLoadingModal && applyStep === 'generating-email'} onOpenChange={() => {}}>
+        <DialogContent className="sm:max-w-md">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <Sparkles className="h-5 w-5 text-blue-600 animate-pulse" />
+              Generating Personalized Email
+            </DialogTitle>
+            <DialogDescription className="pt-3 space-y-3">
+              <div className="flex items-center justify-center py-4">
+                <div className="relative">
+                  <Loader2 className="h-12 w-12 animate-spin text-blue-600" />
+                  <div className="absolute inset-0 flex items-center justify-center">
+                    <div className="h-8 w-8 bg-white rounded-full" />
+                  </div>
+                  <Sparkles className="absolute inset-0 m-auto h-4 w-4 text-blue-600 animate-pulse" />
+                </div>
+              </div>
+              <p className="text-center text-gray-600">
+                We're crafting a personalized email tailored to your resume and this job position.
+              </p>
+              <p className="text-center text-sm text-gray-500">
+                This process typically takes <span className="font-semibold">20-30 seconds</span> to ensure high quality.
+              </p>
+              <div className="flex items-center justify-center gap-1 text-xs text-gray-400">
+                <Clock className="h-3 w-3" />
+                Please wait while AI analyzes the job requirements...
+              </div>
+            </DialogDescription>
+          </DialogHeader>
+        </DialogContent>
+      </Dialog>
     </motion.div>
   );
 }
