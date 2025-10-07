@@ -151,7 +151,7 @@ export default function Results() {
     // Navigate back to dashboard after a short delay
     setTimeout(() => {
       setLocation('/');
-    }, 1500);
+    }, 500);
   };
 
   // Check if still processing
@@ -201,10 +201,10 @@ export default function Results() {
   // Control transition delay when success animation shows
   useEffect(() => {
     if (showSuccess && scrapingResult?.status === 'completed') {
-      // Wait 1.5 seconds for success animation to complete
+      // Smooth transition after success animation (400ms for seamless flow)
       const timer = setTimeout(() => {
         setShouldShowResults(true);
-      }, 1500);
+      }, 400);
       return () => clearTimeout(timer);
     }
   }, [showSuccess, scrapingResult?.status]);
@@ -360,10 +360,17 @@ export default function Results() {
           className="fixed inset-0 min-h-screen flex items-center justify-center bg-background overflow-hidden z-50"
           initial={{ opacity: 0 }}
           animate={{ opacity: 1 }}
-          exit={{ opacity: 0, scale: 0.95 }}
+          exit={{ 
+            opacity: 0,
+            scale: 0.98,
+            transition: {
+              duration: 0.4,
+              ease: "easeInOut"
+            }
+          }}
           transition={{ 
-            duration: 0.4,
-            exit: { duration: 0.3 }
+            duration: 0.3,
+            ease: "easeOut"
           }}
         >
         {/* Animated gradient background */}
@@ -688,13 +695,22 @@ export default function Results() {
       {!isLoading && scrapingResult && scrapingResult.status === 'completed' && (showSuccess ? shouldShowResults : true) && (
         <motion.div
           key="results"
-          initial={{ opacity: 0, y: 20 }}
-          animate={{ opacity: 1, y: 0 }}
-          exit={{ opacity: 0, scale: 0.98 }}
-          transition={{ 
-            duration: 0.5,
-            delay: 0.2,
-            ease: "easeOut"
+          initial={{ opacity: 0, scale: 0.98 }}
+          animate={{ 
+            opacity: 1, 
+            scale: 1,
+            transition: {
+              duration: 0.4,
+              ease: "easeOut"
+            }
+          }}
+          exit={{ 
+            opacity: 0, 
+            scale: 0.95,
+            transition: {
+              duration: 0.3,
+              ease: "easeIn"
+            }
           }}
         >
           <DashboardLayout user={user} onLogout={() => window.location.href = "/api/auth/logout"} title="Job Results">
