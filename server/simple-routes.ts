@@ -1289,14 +1289,29 @@ Format the email with proper greeting and sign-off.`;
         if (uploadedFile.mimetype === 'application/pdf') {
           // Extract text from PDF using pdf-parse
           try {
-            const pdfParse = (await import('pdf-parse')).default;
+            // Dynamic import for CommonJS module - pdf-parse exports a 'pdf' function
+            const pdfParseModule = await import('pdf-parse');
+            const pdfParse = pdfParseModule.pdf || pdfParseModule;
             const pdfData = await pdfParse(uploadedFile.buffer);
             resumeText = pdfData.text.trim();
             console.log(`Extracted ${resumeText.length} characters from PDF (${pdfData.numpages} pages)`);
+            
+            // Validate that we actually extracted meaningful text
+            if (!resumeText || resumeText.length < 50) {
+              console.error('PDF parsing failed: No meaningful text extracted');
+              return res.status(422).json({ 
+                error: 'PDF text extraction failed', 
+                details: 'Unable to extract text from this PDF. Please ensure your PDF contains selectable text (not scanned images) or upload a DOCX/TXT file instead.',
+                code: 'PDF_NO_TEXT'
+              });
+            }
           } catch (error) {
             console.error('PDF parsing error:', error);
-            // Fallback: still store the file even if text extraction fails
-            resumeText = '';
+            return res.status(422).json({ 
+              error: 'PDF processing failed', 
+              details: 'Unable to parse the PDF file. Please ensure the file is not corrupted or password-protected.',
+              code: 'PDF_PARSE_ERROR'
+            });
           }
         } else if (uploadedFile.mimetype === 'application/vnd.openxmlformats-officedocument.wordprocessingml.document') {
           // Extract text from DOCX
@@ -1305,9 +1320,23 @@ Format the email with proper greeting and sign-off.`;
             const result = await mammoth.extractRawText({ buffer: uploadedFile.buffer });
             resumeText = result.value;
             console.log(`Extracted ${resumeText.length} characters from DOCX`);
+            
+            // Validate that we actually extracted meaningful text
+            if (!resumeText || resumeText.length < 50) {
+              console.error('DOCX parsing failed: No meaningful text extracted');
+              return res.status(422).json({ 
+                error: 'Document text extraction failed', 
+                details: 'Unable to extract text from this document. Please ensure your document contains text content.',
+                code: 'DOCX_NO_TEXT'
+              });
+            }
           } catch (error) {
             console.error('DOCX parsing error:', error);
-            resumeText = '';
+            return res.status(422).json({ 
+              error: 'Document processing failed', 
+              details: 'Unable to parse the Word document. Please ensure the file is not corrupted.',
+              code: 'DOCX_PARSE_ERROR'
+            });
           }
         } else if (uploadedFile.mimetype.startsWith('text/')) {
           // For text files, use the content directly
@@ -1320,9 +1349,23 @@ Format the email with proper greeting and sign-off.`;
             const { data: { text } } = await Tesseract.default.recognize(uploadedFile.buffer, 'eng');
             resumeText = text.trim();
             console.log(`Extracted ${resumeText.length} characters from image via OCR`);
+            
+            // Validate that we actually extracted meaningful text
+            if (!resumeText || resumeText.length < 50) {
+              console.error('OCR failed: No meaningful text extracted from image');
+              return res.status(422).json({ 
+                error: 'Image text extraction failed', 
+                details: 'Unable to extract text from this image. Please upload a PDF, DOCX, or TXT file instead.',
+                code: 'OCR_NO_TEXT'
+              });
+            }
           } catch (error) {
             console.error('OCR parsing error:', error);
-            resumeText = '';
+            return res.status(422).json({ 
+              error: 'Image processing failed', 
+              details: 'Unable to process the image for text extraction. Please upload a PDF, DOCX, or TXT file instead.',
+              code: 'OCR_ERROR'
+            });
           }
         }
       } else if (req.body.resumeText) {
@@ -1339,21 +1382,33 @@ Format the email with proper greeting and sign-off.`;
         return res.status(400).json({ error: 'No resume file provided' });
       }
       
-      // Check if text extraction succeeded - but allow storage even if it failed
+      // Validate that we have meaningful resume text
       if (!resumeText || resumeText.trim().length < 50) {
-        console.warn('Resume text extraction failed or insufficient content:', {
+        console.error('Resume text extraction failed or insufficient content:', {
           textLength: resumeText?.length || 0,
           fileName,
           mimeType
         });
         
-        // Set a fallback message if no text was extracted
-        if (!resumeText || resumeText.trim().length === 0) {
-          resumeText = `[Resume file: ${fileName}] - Text extraction failed. Please upload a text-based PDF, DOCX, or TXT file for best results.`;
-        }
-        
-        // Still store the file, but warn the user
-        console.log('Storing file despite text extraction issues - user can re-upload later');
+        // DO NOT save the file if text extraction failed - return error instead
+        return res.status(422).json({ 
+          error: 'Text extraction failed', 
+          details: 'Unable to extract sufficient text from your resume. Please upload a text-based PDF, DOCX, or TXT file.',
+          code: 'TEXT_EXTRACTION_FAILED',
+          minTextLength: 50,
+          extractedLength: resumeText?.length || 0,
+          supportedFormats: ['.txt', '.pdf', '.doc', '.docx']
+        });
+      }
+      
+      // Additional validation: Check for error message patterns that should never be saved
+      if (resumeText.startsWith('[Resume file:') || resumeText.includes('Text extraction failed')) {
+        console.error('Detected error message pattern in resume text - rejecting');
+        return res.status(422).json({ 
+          error: 'Invalid resume content', 
+          details: 'The resume contains error message text. Please re-upload a valid resume file.',
+          code: 'INVALID_RESUME_CONTENT'
+        });
       }
 
       // Update user's resume with both text and file data
