@@ -41,8 +41,8 @@ export function registerGmailAuthRoutes(app: Express) {
         .limit(1);
       
       // Determine if we should force consent
-      // Only force consent if there's no existing refresh token
-      const forceConsent = !existingCreds || !existingCreds.refreshToken;
+      // Force consent if: no existing credentials, no refresh token, or credentials are inactive
+      const forceConsent = !existingCreds || !existingCreds.refreshToken || !existingCreds.isActive;
       
       console.log('Gmail auth check:', {
         userId: user.id,
@@ -87,26 +87,46 @@ export function registerGmailAuthRoutes(app: Express) {
         returnUrl: result.returnUrl
       });
       
+      // Check if we have existing credentials to preserve refresh token
+      const [existingCreds] = await db
+        .select()
+        .from(gmailCredentials)
+        .where(eq(gmailCredentials.userId, result.userId))
+        .limit(1);
+
+      // If we don't have a refresh token from Google and no existing refresh token, we have a problem
+      if (!result.refreshToken && !existingCreds?.refreshToken) {
+        console.error('No refresh token received and no existing token found');
+        // Force re-authorization with consent
+        const returnUrl = result.returnUrl || '/';
+        return res.redirect(`${returnUrl}?error=gmail_auth_incomplete&reason=no_refresh_token&retry=true`);
+      }
+
       // Store tokens in database
-      await db
-        .insert(gmailCredentials)
-        .values({
-          userId: result.userId,
-          accessToken: result.accessToken!,
-          refreshToken: result.refreshToken!,
-          expiresAt: new Date(result.expiresAt || Date.now() + 3600 * 1000),
-          isActive: true,
-        })
-        .onConflictDoUpdate({
-          target: gmailCredentials.userId,
-          set: {
+      if (existingCreds) {
+        // Update existing record, preserving refresh token if not provided
+        await db
+          .update(gmailCredentials)
+          .set({
             accessToken: result.accessToken!,
-            refreshToken: result.refreshToken || sql`${gmailCredentials.refreshToken}`,
+            refreshToken: result.refreshToken || existingCreds.refreshToken,
             expiresAt: new Date(result.expiresAt || Date.now() + 3600 * 1000),
             isActive: true,
             updatedAt: new Date(),
-          },
-        });
+          })
+          .where(eq(gmailCredentials.userId, result.userId));
+      } else {
+        // Insert new record (must have refresh token)
+        await db
+          .insert(gmailCredentials)
+          .values({
+            userId: result.userId,
+            accessToken: result.accessToken!,
+            refreshToken: result.refreshToken!,
+            expiresAt: new Date(result.expiresAt || Date.now() + 3600 * 1000),
+            isActive: true,
+          });
+      }
 
       console.log('Gmail credentials stored successfully for user:', result.userId);
       
