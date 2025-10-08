@@ -8,6 +8,18 @@ Preferred communication style: Technical and detailed explanations with specific
 
 ## Recent Changes
 
+### October 8, 2025 - Repository Cleanup & Gmail Authorization Fix
+- **Gmail OAuth Fix**: Resolved database constraint error when Google doesn't return refresh token on re-authorization
+- **Smart Token Preservation**: Now preserves existing refresh tokens during OAuth updates instead of requiring new consent
+- **Repository Cleanup**: Removed unused files to streamline deployment:
+  - Deleted old page files (home-old.tsx, results-old.tsx)
+  - Removed unused auth systems (supabaseAuth, replitAuth, simpleGoogleAuth)
+  - Removed unused payment integrations (PayPal, Instamojo, Razorpay)
+  - Cleaned up temporary documentation and files
+- **Deployment Ready**: Updated .env.example with comprehensive variable documentation
+- **Codebase Organization**: Streamlined to only include actively used authentication (Google OAuth + Gmail) and payment (Dodo Payments primary, Cashfree backup) systems
+- **Zero LSP Errors**: Clean TypeScript compilation with no diagnostics
+
 ### October 6, 2025 - Critical Authentication Fix
 - **HTTPS Cookie Configuration**: Fixed session cookies for Replit's HTTPS development environment
 - **Root Cause**: Replit dev URLs use HTTPS (*.replit.dev) but NODE_ENV=development, causing cookie security mismatch
