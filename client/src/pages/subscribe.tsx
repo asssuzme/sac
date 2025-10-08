@@ -10,12 +10,9 @@ import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import Footer from "@/components/footer";
 import { useLocation } from "wouter";
-import PayPalButton from "@/components/PayPalButton";
-
 export default function Subscribe() {
   const { user } = useAuth();
   const { toast } = useToast();
-  const [isProcessing, setIsProcessing] = useState(false);
   const [location, setLocation] = useLocation();
   const [pricing, setPricing] = useState({
     currency: 'USD',
@@ -80,8 +77,6 @@ export default function Subscribe() {
   }, [toast]);
 
   const handleSubscribe = async () => {
-    console.log("Subscribe button clicked");
-    
     // Check if user is logged in
     if (!user) {
       toast({
@@ -89,16 +84,12 @@ export default function Subscribe() {
         description: "Please log in to subscribe to the Pro Plan",
         variant: "destructive",
       });
-      // Redirect to home page for login
       setLocation("/");
       return;
     }
     
-    console.log("User:", user);
-    console.log("Pricing:", pricing);
-    
-    setIsProcessing(true);
-    // PayPal button will handle the payment process
+    // Navigate to upgrade page (Dodo Payments integration)
+    setLocation("/upgrade");
   };
 
   if (!user) {
@@ -190,25 +181,15 @@ export default function Subscribe() {
             </div>
           </Card>
 
-          {/* PayPal Button */}
-          {!isProcessing ? (
-            <Button 
-              className="w-full" 
-              size="lg"
-              onClick={handleSubscribe}
-              disabled={isLoadingPricing}
-            >
-              Subscribe Now - ${pricing.symbol}{pricing.price}/month
-            </Button>
-          ) : (
-            <div className="w-full">
-              <PayPalButton
-                amount={pricing.price.toString()}
-                currency={pricing.currency}
-                intent="CAPTURE"
-              />
-            </div>
-          )}
+          {/* Subscribe Button */}
+          <Button 
+            className="w-full" 
+            size="lg"
+            onClick={handleSubscribe}
+            disabled={isLoadingPricing}
+          >
+            Subscribe Now - {pricing.symbol}{pricing.price}/month
+          </Button>
           
           <p className="text-xs text-center text-muted-foreground">
             Secure payment processing
