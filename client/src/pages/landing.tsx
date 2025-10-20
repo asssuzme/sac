@@ -731,18 +731,6 @@ export default function Landing() {
       </AnimatePresence>
 
 
-      {/* Developer Credit */}
-      <div className="fixed top-3 left-1/2 transform -translate-x-1/2 z-50 text-xs text-gray-400">
-        developed by{" "}
-        <a
-          href="https://www.linkedin.com/in/ashutosh-lath-3a374b2b3/"
-          target="_blank"
-          rel="noopener noreferrer"
-          className="text-transparent bg-gradient-to-r from-blue-500 to-purple-600 bg-clip-text hover:from-blue-400 hover:to-purple-500 transition-all cursor-pointer font-medium"
-        >
-          ashutosh lath
-        </a>
-      </div>
 
       {/* Hero Section - Matching Production Layout */}
       <section className="relative pt-8 pb-8 sm:pb-12 md:pb-20 px-3 sm:px-6 lg:px-8 overflow-hidden bg-black">
